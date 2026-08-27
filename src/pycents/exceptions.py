@@ -15,3 +15,7 @@ class CurrencyMismatchError(PyCentsError):
 
 class BackendConfigurationError(PyCentsError):
     """Raised when a configuration is not supported by a backend formatter."""
+
+
+class InvalidCurrencyError(PyCentsError):
+    """Raised when a custom currency is not registered"""

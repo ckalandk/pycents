@@ -71,7 +71,7 @@ class MoneyFormatter:
 
         str_money = self.backend_formatter.format(
             money.to_decimal(),
-            money.currency.ccy_code,
+            money.currency,
             spec,
         )
         try:

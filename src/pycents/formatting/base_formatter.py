@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from decimal import Decimal
 
+from pycents.currency import Currency
 from pycents.rounding import RoundingMode
 
 from .formatspec import DisplayOpts, FormatSpec
@@ -61,7 +62,7 @@ class BaseFormatter(ABC):
     def format(
         self,
         amount: Decimal,
-        currency: str,
+        currency: Currency,
         spec: FormatSpec,
     ) -> str:
         raise NotImplementedError

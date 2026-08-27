@@ -16,6 +16,7 @@ from babel.numbers import (
 )
 
 from pycents._decimal import _enforce_precision
+from pycents.currency import Currency
 from pycents.exceptions import BackendConfigurationError, InvalidFormatSpecError
 from pycents.rounding import RoundingMode, as_decimal_rounding
 
@@ -35,6 +36,22 @@ def _format_compact_decimal(number: Decimal) -> tuple[Decimal, str]:
         number /= 1000
         idx += 1
     return number, str(suffix[idx])
+
+
+def _swap_euro_with_custom_currency(
+    amount: Decimal, result: str, currency: Currency, locale: str, spec: FormatSpec
+) -> str:
+    if spec.ccy_display == "hidden":
+        return result
+    elif spec.ccy_display == "symbol":
+        result = result.replace("€", currency.symbol)
+        result = result.replace("EUR", currency.ccy_code)
+    elif spec.ccy_display == "iso":
+        result = result.replace("EUR", currency.ccy_code)
+    elif spec.ccy_display == "name":
+        ccy_name = get_currency_name("EUR", amount, locale=locale)
+        result = result.replace(ccy_name, currency.ccy_name.lower())
+    return result
 
 
 def _format_currency_name(
@@ -122,8 +139,8 @@ def _format_currency_iso(
     numbering_system: str = "latn",
 ) -> str:
     loc = Locale.parse(locale)
-    assert spec.compact_precision is not None
     if spec.compact:
+        assert spec.compact_precision is not None
         amount, magnitude = _format_compact_decimal(amount)
         plural_form = loc.plural_form(amount)
         # Safe lookup for compact plural categories
@@ -137,6 +154,7 @@ def _format_currency_iso(
 
     pattern_str = pattern.pattern
     if spec.compact:
+        assert spec.compact_precision is not None
         pattern_str = re.sub(
             r"(0+)(?!\.)", rf"\g<1>.{'0' * spec.compact_precision}", pattern_str
         )
@@ -147,6 +165,7 @@ def _format_currency_iso(
 
     custom_pattern = parse_pattern(pattern_str)
     if spec.compact:
+        assert spec.compact_precision is not None
         amount = _enforce_precision(amount, spec.compact_precision, rounding)
 
     # babel apply method is unannotated, this cast is necessary
@@ -172,8 +191,8 @@ def _format_currency_hidden(
     rounding: RoundingMode = RoundingMode.HALF_EVEN,
     numbering_system: str = "latn",
 ) -> str:
-    assert spec.compact_precision is not None
     if spec.compact:
+        assert spec.compact_precision is not None
         with decimal.localcontext(
             decimal.Context(rounding=as_decimal_rounding(rounding))
         ):
@@ -240,20 +259,27 @@ class BabelFormatter(BaseFormatter):
     def format(
         self,
         amount: Decimal,
-        currency: str,
+        currency: Currency,
         spec: FormatSpec,
     ) -> str:
         numbering_system: str = (
             self.numbering_system if self.numbering_system is not None else "default"
         )
         try:
+            if currency.is_iso:
+                code = currency.ccy_code
+            else:
+                code = "EUR"
             result = _format_currency(
-                amount, currency, self.locale, spec, self._rounding, numbering_system
+                amount, code, self.locale, spec, self._rounding, numbering_system
             )
         except UnsupportedNumberingSystemError:
             raise BackendConfigurationError(
                 f"Numbering system '{numbering_system}' is not supported "
                 f"by the Babel backend for locale '{self.locale}'"
             ) from None
-
+        if not currency.is_iso:
+            result = _swap_euro_with_custom_currency(
+                amount, result, currency, self.locale, spec
+            )
         return result

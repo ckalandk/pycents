@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from pycents._decimal import _enforce_precision
-from pycents.currency import Ccy
+from pycents.currency import Currency
 from pycents.exceptions import InvalidFormatSpecError
 
 from .base_formatter import BaseFormatter
@@ -22,10 +22,10 @@ def _format_compact_decimal(number: Decimal) -> tuple[Decimal, str]:
     return number, suffix[idx]
 
 
-def _get_currency_code(currency: str, display_option: str) -> str:
+def _get_currency_code(currency: Currency, display_option: str) -> str:
     _map_display = {
-        "iso": Ccy[currency].ccy_code,
-        "name": Ccy[currency].ccy_name,
+        "iso": currency.ccy_code,
+        "name": currency.ccy_name,
         "hidden": "",
     }
     try:
@@ -48,7 +48,7 @@ class StdFormatter(BaseFormatter):
     def format(
         self,
         amount: Decimal,
-        currency: str,
+        currency: Currency,
         spec: FormatSpec,
     ) -> str:
         if spec.ccy_display == "symbol":
@@ -58,9 +58,11 @@ class StdFormatter(BaseFormatter):
             )
 
         symbol = _get_currency_code(currency, spec.ccy_display)
+        if not currency.is_iso and spec.ccy_display == "name":
+            symbol = symbol.lower()
 
         if spec.ccy_display == "name":
-            format_type = "{sign}{number}{suffix}\xa0{currency}"
+            format_type = "{sign}{number}{suffix} {currency}"
         elif spec.ccy_display == "iso":
             format_type = "{sign}{currency}\xa0{number}{suffix}"
         else:

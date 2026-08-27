@@ -333,6 +333,12 @@ def test_money_negation(n):
     assert (-money).minor_units == -n
 
 
+@given(st.integers(min_value=-10, max_value=10))
+def test_money_abs(n):
+    mny = Money(n, Currency.from_code("USD"))
+    assert abs(mny) == Money(abs(n), Currency.from_code("USD"))
+
+
 @given(st.integers())
 def test_money_negation_is_additive_inverse(n):
     money = Money(n, currency=Currency(Ccy.USD))

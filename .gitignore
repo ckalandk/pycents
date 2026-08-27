@@ -24,7 +24,6 @@ docs/_build/
 
 # playground
 examples/lab.py
-profiling/
 extra/
 
 # Coverage reports

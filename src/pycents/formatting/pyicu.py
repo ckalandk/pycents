@@ -3,6 +3,7 @@ from typing import Any
 
 import icu as _icu
 
+from pycents.currency import Currency
 from pycents.exceptions import BackendConfigurationError, InvalidFormatSpecError
 from pycents.rounding import RoundingMode
 
@@ -26,8 +27,44 @@ _icu_rounding_map = {
 }
 
 
+def _get_currency_display_part(
+    amount: decimal.Decimal, locale: str, currency: Currency
+) -> str:
+    ccy_formatter = (
+        icu.NumberFormatter.withLocale(icu.Locale(locale))
+        .unit(icu.CurrencyUnit("EUR"))
+        .unitWidth(icu.UNumberUnitWidth.FULL_NAME)
+    )
+
+    number_formatter = icu.NumberFormatter.withLocale(icu.Locale(locale))
+
+    precision_rule = icu.Precision.fixedFraction(currency.minor_units)
+    number_formatter = number_formatter.precision(precision_rule)
+    ccy_display = str(ccy_formatter.formatDecimal(str(amount).encode("utf-8")).strip())
+    ccy_display = ccy_display.replace("€", "").strip()
+    number = str(number_formatter.formatDecimal(str(amount).encode("utf-8")).strip())
+    result = ccy_display.strip(number).strip()
+    return result
+
+
+def _normalize_xcurrency_display(
+    currency: Currency, locale: str, result: str, spec: FormatSpec
+) -> str:
+    assert not currency.is_iso
+    if spec.ccy_display == "symbol":
+        result = result.replace("€", currency.symbol)
+        # Some locales use EUR code instead of the symbol € for displaying
+        # even if the formatter was build explicitly to use currency symbol
+        result = result.replace("EUR", currency.ccy_code)
+    elif spec.ccy_display == "iso":
+        result = result.replace("EUR", currency.ccy_code)
+    else:
+        pass
+    return result
+
+
 def _build_icu_currency_formatter(
-    currency: str, locale: str, spec: FormatSpec, rounding: RoundingMode
+    currency: Currency, locale: str, spec: FormatSpec, rounding: RoundingMode
 ) -> icu.NumberFormatter:  # pyright: ignore[reportInvalidTypeForm, type]
     """
     Returns an ICU NumberFormatter configured for specific financial layouts.
@@ -37,9 +74,16 @@ def _build_icu_currency_formatter(
             "Accounting format is not supported with currency name display."
         )
 
-    # Common formatter setup
+    # Common formatter setup. When the currency is a custom currency
+    # we use EUR as a placeholder currency, and replace the formatted
+    # result symbol/code/name with the corresponding currency datas.
+    if not currency.is_iso:
+        iso_code = "EUR"
+    else:
+        iso_code = currency.ccy_code
+
     formatter = icu.NumberFormatter.withLocale(icu.Locale(locale)).unit(
-        icu.CurrencyUnit(currency)
+        icu.CurrencyUnit(iso_code)
     )
 
     # Apply currency display
@@ -78,6 +122,7 @@ def _build_icu_currency_formatter(
         formatter = formatter.grouping(icu.UNumberGroupingStrategy.OFF)
     else:
         formatter = formatter.grouping(icu.UNumberGroupingStrategy.AUTO)
+
     return formatter
 
 
@@ -110,14 +155,16 @@ class IcuFormatter(BaseFormatter):
     def format(
         self,
         amount: decimal.Decimal,
-        currency: str,
+        currency: Currency,
         spec: FormatSpec,
     ) -> str:
-
         formatter = _build_icu_currency_formatter(
             currency, self._icu_locale_string, spec, self._rounding
         )
 
+        # Adapt precision display to the number of decimals
+        # of amount.
+        # In compact notation, the precision is controlled by spec.compact_prrecision
         if not spec.compact:
             exp = amount.as_tuple().exponent
             assert isinstance(exp, int)
@@ -125,6 +172,17 @@ class IcuFormatter(BaseFormatter):
             precision_rule = icu.Precision.fixedFraction(exact_places)
             formatter = formatter.precision(precision_rule)
 
+        str_result = str(formatter.formatDecimal(str(amount).encode("utf-8")).strip())
+        if not currency.is_iso:
+            if spec.ccy_display == "name":
+                ccy_part = _get_currency_display_part(amount, self.locale, currency)
+                str_result = str_result.replace(
+                    ccy_part, currency.ccy_name.lower()
+                ).replace("€", currency.symbol)
+            else:
+                str_result = _normalize_xcurrency_display(
+                    currency, self.locale, str_result, spec
+                )
         if spec.accounting and spec.compact and amount < 0:
             # ICU/CLDR does not define accounting formatting for compact notation.
             # or maybe i am wrong???
@@ -133,8 +191,8 @@ class IcuFormatter(BaseFormatter):
             # when the currency symbol is hidden
             # TODO: This needs to be extensively tested across locales to ensure
             # it behaves as expected.
-            positive_string = formatter.formatDecimal(str(abs(amount)).encode("utf-8"))
-            return f"({positive_string.strip()})"
+            str_result = str_result.replace("-", "")
+            return f"({str_result.strip()})"
         # The returned formatted string stripped from leading/trailing whitespace
-        # to avoid issues with hidden currency symbols and compact formatting.
-        return str(formatter.formatDecimal(str(amount).encode("utf-8")).strip())
+        # to avoid issues when using hidden currency symbols format in compact notation.
+        return str_result.strip()

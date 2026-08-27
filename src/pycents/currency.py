@@ -3,9 +3,11 @@ from __future__ import annotations
 from dataclasses import InitVar, dataclass, field
 from typing import ClassVar
 
+from .exceptions import InvalidCurrencyError
 from .iso4217 import Ccy
+from .xcy import Xcy
 
-__all__ = ["Currency", "Ccy"]
+__all__ = ["Currency", "Ccy", "Xcy"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,35 +34,45 @@ class Currency:
         The ISO 4217 numeric currency code.
     """
 
-    ccy: InitVar[Ccy]
+    ccy: InitVar[Ccy | Xcy]
     ccy_code: str = field(init=False)
     ccy_name: str = field(init=False, repr=False)
     minor_units: int = field(init=False, repr=False)
+    symbol: str = field(init=False, repr=False)
+    is_iso: str = field(init=False, repr=False)
     ccy_num_code: int = field(init=False, repr=False)
 
-    _cache: ClassVar[dict[Ccy, Currency]] = {}
+    _cache: ClassVar[dict[Ccy | Xcy, Currency]] = {}
 
-    def __new__(cls, ccy: Ccy) -> Currency:
+    def __new__(cls, ccy: Ccy | Xcy) -> Currency:
         if ccy in cls._cache:
             return cls._cache[ccy]
         obj = object.__new__(cls)
         cls._cache[ccy] = obj
         return obj
 
-    def __post_init__(self, ccy: Ccy) -> None:
+    def __post_init__(self, ccy: Ccy | Xcy) -> None:
+        assert isinstance(ccy, (Ccy, Xcy))
+        _is_iso = isinstance(ccy, Ccy)
         object.__setattr__(self, "ccy_code", ccy.ccy_code)
         object.__setattr__(self, "ccy_name", ccy.ccy_name)
         object.__setattr__(self, "minor_units", ccy.minor_units)
+        object.__setattr__(self, "is_iso", _is_iso)
         object.__setattr__(self, "ccy_num_code", ccy.ccy_num_code)
+        if isinstance(ccy, Xcy):
+            symbol = ccy.symbol
+        else:
+            symbol = ""
+        object.__setattr__(self, "symbol", symbol)
 
     @classmethod
-    def from_code(cls, ccy: Ccy | str) -> Currency:
+    def from_code(cls, ccy: Xcy | Ccy | str) -> Currency:
         """
         Construct a Currency instance from an ISO 4217 currency code.
 
         Parameters
         ----------
-        ccy : Ccy | str
+        ccy : Xcy | Ccy | str
             Either a member of the ``Ccy`` enumeration or a three-letter
             ISO 4217 alphabetic currency code.
 
@@ -82,10 +94,11 @@ class Currency:
         Currency(ccy_code='USD')
         """
         if isinstance(ccy, str):
-            try:
-                ccy = Ccy[ccy]
-            except KeyError as err:
-                raise ValueError(
-                    f"{ccy} is not a valid ISO 4217 currency code."
-                ) from err
-        return cls(ccy)
+            code_upper = ccy.upper()
+            curr = Ccy.__members__.get(ccy) or getattr(Xcy, code_upper, None)
+            if curr is None:
+                raise InvalidCurrencyError(f"'{ccy}' is not a known currency code.")
+        else:
+            curr = ccy
+
+        return cls(curr)

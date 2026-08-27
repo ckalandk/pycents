@@ -5,6 +5,7 @@ from copy import copy
 import pytest
 
 from pycents import Money, formatting
+from pycents.currency import Currency
 from pycents.exceptions import InvalidFormatSpecError
 from pycents.formatting._default import _FormatContext
 from pycents.formatting.base_formatter import BaseFormatter
@@ -72,7 +73,7 @@ def test_money_format_forward_amount_and_currency_code(formatter):
     assert format(money, "") == "dummy"
 
     assert formatter.calls[0]["amount"] == money.to_decimal()
-    assert formatter.calls[0]["currency"] == "USD"
+    assert formatter.calls[0]["currency"] == Currency.from_code("USD")
 
 
 @pytest.mark.parametrize(

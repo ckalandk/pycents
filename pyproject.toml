@@ -79,6 +79,9 @@ packages = ["src/pycents"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = ["--import-mode=importlib"]
+markers = [
+    "slow: slow tests that may be skipped during normal development",
+]
 
 # Test Coverage Configuration
 [tool.coverage.run]

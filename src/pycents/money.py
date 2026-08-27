@@ -8,7 +8,7 @@ from typing import Any, Self, final, overload
 from pycents.formatting import format as money_format
 
 from ._decimal import _decimal_places, _force_decimal, _remove_trailing_zeros
-from .currency import Ccy, Currency
+from .currency import Ccy, Currency, Xcy
 from .exceptions import CurrencyMismatchError
 from .formatting.protocols import _SupportMoneyOperation
 from .rounding import RoundingMode, as_decimal_rounding
@@ -178,6 +178,8 @@ class Money(_SupportMoneyOperation):
 
     __slots__ = ("_amount", "_currency")
 
+    __match_args__ = ("_amount", "_currency")
+
     _zero_cache: dict[str, Self] = {}
 
     def __init__(self, minor_units: int, currency: Currency) -> None:
@@ -188,7 +190,7 @@ class Money(_SupportMoneyOperation):
         raise AttributeError(f"{type(self).__name__} instances are immutable")
 
     @classmethod
-    def zero(cls, currency: Ccy | str) -> Money:
+    def zero(cls, currency: Ccy | Xcy | str) -> Money:
         """Create a zero-valued Money instance for the given currency.
 
         The zero-valued instance is cached and reused for subsequent
@@ -210,7 +212,7 @@ class Money(_SupportMoneyOperation):
     def from_major(
         cls,
         amount: int | str | Decimal,
-        currency: Ccy | str,
+        currency: Ccy | Xcy | str,
         *,
         rounding: RoundingMode = RoundingMode.HALF_EVEN,
     ) -> Money:
