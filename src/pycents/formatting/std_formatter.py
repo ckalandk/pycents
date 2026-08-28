@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from pycents._decimal import _enforce_precision
+from pycents._decimal import _enforce_precision, _trim_trailing_zeros
 from pycents.currency import Currency
 from pycents.exceptions import InvalidFormatSpecError
 
@@ -76,6 +76,9 @@ class StdFormatter(BaseFormatter):
                 amount = _enforce_precision(
                     amount, spec.compact_precision, self._rounding
                 )
+
+        if spec.trim_trailing_zeros:
+            amount = _trim_trailing_zeros(amount)
 
         if amount < 0:
             sign = "-"

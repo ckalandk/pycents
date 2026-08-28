@@ -163,6 +163,20 @@ class TestIcuFormatter:
         result = usd_formatter.format(Decimal("1234567.89"), usd, spec)
         assert normalize_space(result) == expected
 
+    @pytest.mark.parametrize(
+        "trim, amount, expected",
+        [
+            (True, Decimal("225.50"), "$225.5"),
+            (False, Decimal("225.50"), "$225.50"),
+            (True, Decimal("225.12345000"), "$225.12345"),
+        ],
+    )
+    def teste_trim_trailing_zeros(self, trim, amount, expected, usd, usd_formatter):
+
+        result = usd_formatter.format(amount, usd, FormatSpec(trim_trailing_zeros=trim))
+
+        assert result == expected
+
     # Rounding Policies
 
     def test_icu_formatter_rejects_invalid_rounding_mode(self, usd_formatter, usd):

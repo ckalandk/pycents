@@ -2,7 +2,7 @@ from decimal import Decimal
 
 import pytest
 
-from pycents._decimal import _remove_trailing_zeros
+from pycents._decimal import _trim_trailing_zeros
 
 
 @pytest.mark.parametrize(
@@ -15,4 +15,4 @@ from pycents._decimal import _remove_trailing_zeros
     ],
 )
 def test_decimal_remove_trailing_zeros(value, expected):
-    assert _remove_trailing_zeros(value).as_tuple().exponent == expected
+    assert _trim_trailing_zeros(value).as_tuple().exponent == expected

@@ -52,7 +52,10 @@ class Currency:
         return obj
 
     def __post_init__(self, ccy: Ccy | Xcy) -> None:
-        assert isinstance(ccy, (Ccy, Xcy))
+        if not isinstance(ccy, (Ccy, Xcy)):
+            raise TypeError(
+                f"Expected an instance of Ccy or Xcy, got {type(ccy).__name__}"
+            )
         _is_iso = isinstance(ccy, Ccy)
         object.__setattr__(self, "ccy_code", ccy.ccy_code)
         object.__setattr__(self, "ccy_name", ccy.ccy_name)

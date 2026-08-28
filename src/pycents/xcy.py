@@ -33,8 +33,8 @@ class XcyMeta(type):
             xcy_code = name
         return xcy_code.upper() in cls._registry
 
-    def __iter__(cls) -> Iterator[str]:
-        return iter(cls._registry.keys())
+    def __iter__(cls) -> Iterator[Xcy]:
+        return iter(cls._registry.values())
 
 
 class Xcy(metaclass=XcyMeta):
@@ -53,4 +53,4 @@ class Xcy(metaclass=XcyMeta):
         self.ccy_num_code = num_code
 
     def __repr__(self) -> str:
-        return f"Xcy(code='{self.ccy_code}')"
+        return f"{self.__class__.__name__}.{self.ccy_code}"

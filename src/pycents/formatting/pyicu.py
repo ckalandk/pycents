@@ -3,6 +3,7 @@ from typing import Any
 
 import icu as _icu
 
+from pycents._decimal import _trim_trailing_zeros
 from pycents.currency import Currency
 from pycents.exceptions import BackendConfigurationError, InvalidFormatSpecError
 from pycents.rounding import RoundingMode
@@ -107,8 +108,16 @@ def _build_icu_currency_formatter(
 
     if spec.compact:
         formatter = formatter.notation(icu.Notation.compactShort())
-        precision_rule = icu.Precision.fixedFraction(spec.compact_precision)
-        formatter = formatter.precision(precision_rule)
+        precision = spec.compact_precision
+    else:
+        precision = currency.minor_units
+
+    if spec.trim_trailing_zeros:
+        precision_rule = icu.Precision.minMaxFraction(0, precision)
+    else:
+        precision_rule = icu.Precision.fixedFraction(precision)
+
+    formatter = formatter.precision(precision_rule)
 
     # Apply decimal rounding strategy
     try:
@@ -162,6 +171,11 @@ class IcuFormatter(BaseFormatter):
             currency, self._icu_locale_string, spec, self._rounding
         )
 
+        # Important! we need to trim insignificant zeros
+        # from amount before passing it to format method
+        # otherwise pyicu will still display keep them!
+        if spec.trim_trailing_zeros:
+            amount = _trim_trailing_zeros(amount)
         # Adapt precision display to the number of decimals
         # of amount.
         # In compact notation, the precision is controlled by spec.compact_prrecision

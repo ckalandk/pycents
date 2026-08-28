@@ -24,6 +24,20 @@ def test_xcy_register_currency(monkeypatch):
     assert xcy.ccy_num_code == 0
 
 
+def test_xcy_register_override_existing_currency(monkeypatch):
+    registry = {}
+    monkeypatch.setattr(XcyMeta, "_registry", registry)
+
+    Xcy.register("HGC", "Holy Grail Coin", 0)
+    Xcy.register("HGC", "Silly Walk Credit", 2)
+
+    assert len(registry) == 1
+
+    xcy = Xcy.HGC
+    assert xcy.ccy_name == "Silly Walk Credit"
+    assert xcy.minor_units == 2
+
+
 def test_xcy_getitem():
     xcy = Xcy["TST"]
     assert Xcy.TST == xcy
@@ -36,9 +50,9 @@ def test_xcy_iteration(monkeypatch):
     Xcy.register("HGC", "Holy Grail Coin", 0)
     Xcy.register("BKG", "Biggus Creditus", 2)
 
-    xcys = sorted(list(iter(Xcy)))
+    xcys = list(iter(Xcy))
 
-    assert xcys == ["BKG", "HGC"]
+    assert xcys == [Xcy.HGC, Xcy.BKG]
 
 
 def test_xcy_raises_if_xcurrency_is_not_registered():
@@ -56,4 +70,4 @@ def test_xcy_contain_dunder():
 
 def test_xcy_repr():
     result = repr(Xcy.BTC)
-    assert result == "Xcy(code='BTC')"
+    assert result == "Xcy.BTC"

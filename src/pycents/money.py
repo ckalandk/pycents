@@ -7,7 +7,7 @@ from typing import Any, Self, final, overload
 
 from pycents.formatting import format as money_format
 
-from ._decimal import _decimal_places, _force_decimal, _remove_trailing_zeros
+from ._decimal import _decimal_places, _force_decimal, _trim_trailing_zeros
 from .currency import Ccy, Currency, Xcy
 from .exceptions import CurrencyMismatchError
 from .formatting.protocols import _SupportMoneyOperation
@@ -68,7 +68,7 @@ class UnroundedMoney(_SupportMoneyOperation):
         mn_unit = self._currency.minor_units
         exponent = Decimal("1").scaleb(-mn_unit)
         ret = Decimal(self._amount) * exponent
-        return _remove_trailing_zeros(ret)
+        return _trim_trailing_zeros(ret)
 
     def __add__(self, other: MoneyLike) -> UnroundedMoney:
         if not isinstance(other, (UnroundedMoney, Money)):

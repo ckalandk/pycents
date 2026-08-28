@@ -20,6 +20,7 @@ class MoneyFormatter:
         r"(?P<compact>c)?"
         r"(?P<accounting>a)?"
         r"(?P<group_sep>u)?"
+        r"(?P<trim>~)?"
         r"(?P<rest>.*)$"
     )
 
@@ -41,7 +42,14 @@ class MoneyFormatter:
             )
         if all(
             match[key] is None
-            for key in ["display", "compact", "precision", "group_sep", "accounting"]
+            for key in [
+                "display",
+                "compact",
+                "precision",
+                "group_sep",
+                "accounting",
+                "trim",
+            ]
         ):
             return None, match["rest"]
 
@@ -57,6 +65,7 @@ class MoneyFormatter:
                 else _map_symbol[match["display"]]
             ),
             group_separator=match["group_sep"] is None,
+            trim_trailing_zeros=match["trim"] is not None,
         ), match["rest"]
 
     def format(self, money: _SupportMoneyOperation, format_spec: str) -> str:

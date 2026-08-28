@@ -54,21 +54,41 @@ def _swap_euro_with_custom_currency(
     return result
 
 
+def _adapt_pattern_to_xcurrency_minor_unit(
+    pattern: str, currency: Currency, trim_trailing_zeros: bool = False
+) -> str:
+    base_pattern = re.sub(r"\.[0-9#]+", "", pattern)
+    char = "#" if trim_trailing_zeros else "0"
+    fraction_part = "." + (char * currency.minor_units)
+
+    # if currency is an ISO 4217 Currency and users
+    # didn't request to trim insignificant zeros
+    # do not change the pattern.
+    if currency.is_iso and not trim_trailing_zeros:
+        return pattern
+
+    custom_pattern = re.sub(r"0([^0]*(?:;|$))", rf"0{fraction_part}\g<1>", base_pattern)
+
+    return custom_pattern
+
+
 def _format_currency_name(
     amount: Decimal,
-    currency: str,
+    currency: Currency,
     locale: str,
     spec: FormatSpec,
     rounding: RoundingMode = RoundingMode.HALF_EVEN,
     numbering_system: str = "latn",
 ) -> str:
+    code = "EUR" if not currency.is_iso else currency.ccy_code
     if spec.accounting:
         raise InvalidFormatSpecError(
             "Cannot display currency name while using accounting format."
         )
     if spec.compact:
-        unit_pattern = get_currency_unit_pattern(currency, amount, locale)
-        display_name = get_currency_name(currency, count=amount, locale=locale)
+        unit_pattern = get_currency_unit_pattern(currency.ccy_code, amount, locale)
+        display_name = get_currency_name(code, count=amount, locale=locale)
+
         assert spec.compact_precision is not None
         with decimal.localcontext(
             decimal.Context(rounding=as_decimal_rounding(rounding))
@@ -83,7 +103,7 @@ def _format_currency_name(
     else:
         return format_currency(
             amount,
-            currency,
+            code,
             locale=locale,
             format_type="name",
             decimal_quantization=False,
@@ -94,21 +114,27 @@ def _format_currency_name(
 
 def _format_currency_symbol(
     amount: Decimal,
-    currency: str,
+    currency: Currency,
     locale: str,
     spec: FormatSpec,
     rounding: RoundingMode = RoundingMode.HALF_EVEN,
     numbering_system: str = "latn",
 ) -> str:
+    code = currency.ccy_code if currency.is_iso else "EUR"
     if spec.compact and spec.accounting:
         raise InvalidFormatSpecError("Cannot mix compact and accounting format display")
     if not spec.compact:
         fmt_type: Literal["standard", "accounting"] = (
             "accounting" if spec.accounting else "standard"
         )
+        pattern = Locale.parse(locale).currency_formats[fmt_type].pattern
+        pattern = _adapt_pattern_to_xcurrency_minor_unit(
+            pattern, currency, spec.trim_trailing_zeros
+        )
         return format_currency(
             amount,
-            currency,
+            code,
+            pattern,
             locale=locale,
             format_type=fmt_type,
             currency_digits=False,
@@ -122,7 +148,7 @@ def _format_currency_symbol(
         ):
             result = format_compact_currency(
                 amount,
-                currency,
+                code,
                 locale=locale,
                 fraction_digits=spec.compact_precision,
                 numbering_system=numbering_system,
@@ -132,12 +158,15 @@ def _format_currency_symbol(
 
 def _format_currency_iso(
     amount: Decimal,
-    currency: str,
+    currency: Currency,
     locale: str,
     spec: FormatSpec,
     rounding: RoundingMode = RoundingMode.HALF_EVEN,
     numbering_system: str = "latn",
 ) -> str:
+    if spec.compact and spec.accounting:
+        raise InvalidFormatSpecError("Cannot mix compact and accounting format display")
+
     loc = Locale.parse(locale)
     if spec.compact:
         assert spec.compact_precision is not None
@@ -163,6 +192,9 @@ def _format_currency_iso(
     pattern_str = re.sub(r"(?<=[#0.,])¤+", "\xa0¤¤", pattern_str)
     pattern_str = re.sub(r"¤+", "¤¤", pattern_str)
 
+    pattern_str = _adapt_pattern_to_xcurrency_minor_unit(
+        pattern_str, currency, spec.trim_trailing_zeros
+    )
     custom_pattern = parse_pattern(pattern_str)
     if spec.compact:
         assert spec.compact_precision is not None
@@ -174,7 +206,7 @@ def _format_currency_iso(
         custom_pattern.apply(
             value=amount,
             locale=locale,
-            currency=currency,
+            currency=currency.ccy_code,
             currency_digits=False,
             decimal_quantization=False,
             group_separator=spec.group_separator,
@@ -185,7 +217,7 @@ def _format_currency_iso(
 
 def _format_currency_hidden(
     amount: Decimal,
-    currency: str,
+    currency: Currency,
     locale: str,
     spec: FormatSpec,
     rounding: RoundingMode = RoundingMode.HALF_EVEN,
@@ -225,7 +257,7 @@ _map_display_format = {
 
 def _format_currency(
     amount: Decimal,
-    currency: str,
+    currency: Currency,
     locale: str,
     spec: FormatSpec,
     rounding: RoundingMode = RoundingMode.HALF_EVEN,
@@ -266,12 +298,8 @@ class BabelFormatter(BaseFormatter):
             self.numbering_system if self.numbering_system is not None else "default"
         )
         try:
-            if currency.is_iso:
-                code = currency.ccy_code
-            else:
-                code = "EUR"
             result = _format_currency(
-                amount, code, self.locale, spec, self._rounding, numbering_system
+                amount, currency, self.locale, spec, self._rounding, numbering_system
             )
         except UnsupportedNumberingSystemError:
             raise BackendConfigurationError(

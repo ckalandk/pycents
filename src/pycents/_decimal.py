@@ -16,7 +16,7 @@ def _decimal_places(x: Decimal) -> int:
     return abs(exponent) if exponent < 0 else 0
 
 
-def _remove_trailing_zeros(value: Decimal) -> Decimal:
+def _trim_trailing_zeros(value: Decimal) -> Decimal:
     """
     Removes trailing fractional zeroes from a Decimal .
     """

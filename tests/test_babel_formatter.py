@@ -1034,6 +1034,46 @@ class TestBabelFormatter:
         result = babel_formatter.format(Decimal("1234567.89"), usd, spec)
         assert result == expected
 
+    @pytest.mark.parametrize(
+        "trim, amount, expected",
+        [
+            (True, Decimal("225.50"), "$225.5"),
+            (False, Decimal("225.50"), "$225.50"),
+            (True, Decimal("225.12345000"), "$225.12345"),
+        ],
+    )
+    def teste_trim_trailing_zeros(self, trim, amount, expected, usd, babel_formatter):
+
+        result = babel_formatter.format(
+            amount, usd, FormatSpec(trim_trailing_zeros=trim)
+        )
+
+        assert result == expected
+
+    @pytest.mark.parametrize(
+        "trim, precision, amount, expected",
+        [
+            (True, 1, Decimal("2130"), "$2.1K"),
+            (True, 2, Decimal("2130"), "$2.13K"),
+            (False, 3, Decimal("2130"), "$2.13K"),
+            (False, 4, Decimal("2130"), "$2.13K"),
+        ],
+    )
+    def teste_trim_trailing_zeros_in_compact_notation(
+        self, trim, precision, amount, expected, usd, babel_formatter
+    ):
+        # Babel is trimming the insignificant zero by default
+        # TODO find a workaround to force babel to respect
+        # the compact precision when the trim_trailing_zeros option
+        # is False. e.g if compact precision is 4,  Decimal("22550")
+        # should be formatted as $2.2550K not $2.255K
+        spec = FormatSpec(
+            compact=True, compact_precision=precision, trim_trailing_zeros=trim
+        )
+        result = babel_formatter.format(amount, usd, spec)
+
+        assert result == expected
+
     # Rounding Policies
 
     @pytest.mark.parametrize(

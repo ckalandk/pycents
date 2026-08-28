@@ -12,6 +12,7 @@ class FormatSpec:
     compact_precision: int | None = 1
     accounting: bool = False
     group_separator: bool = True
+    trim_trailing_zeros: bool = False
 
     def update(
         self,
@@ -20,6 +21,7 @@ class FormatSpec:
         compact_precision: int | None = None,
         accounting: bool | None = None,
         group_separator: bool | None = None,
+        trim_trailing_zeros: bool | None = None,
     ) -> None:
         """Safely updates attributes only if a value is provided."""
         if compact is not None:
@@ -32,3 +34,5 @@ class FormatSpec:
             self.ccy_display = display
         if group_separator is not None:
             self.group_separator = group_separator
+        if trim_trailing_zeros is not None:
+            self.trim_trailing_zeros = trim_trailing_zeros
