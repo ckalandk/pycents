@@ -10,23 +10,24 @@ def test_currency_new_has_expected_attr():
     usd = Currency(Ccy.USD)
     assert astuple(usd) == Ccy.USD.value
 
+    tst = Currency(Xcy.TST)
+    assert astuple(tst) == Xcy.TST.value
+
 
 def test_currency_factory_with_str_arg():
     usd = Currency.from_code("USD")
     assert astuple(usd) == Ccy.USD.value
+
+    tst = Currency.from_code("TST")
+    assert astuple(tst) == Xcy.TST.value
 
 
 def test_currency_factory_with_ccy_arg():
     usd = Currency.from_code(Ccy.USD)
     assert astuple(usd) == Ccy.USD.value
 
-
-def test_currency_custom_xcy():
-    btc = Currency(Xcy.BTC)
-    assert btc.ccy_code == Xcy.BTC.ccy_code
-
-    other = Currency.from_code("BTC")
-    assert other is btc
+    tst = Currency.from_code(Xcy.TST)
+    assert astuple(tst) == Xcy.TST.value
 
 
 def test_currency_factory_raises_for_invalid_str_code():
@@ -36,11 +37,19 @@ def test_currency_factory_raises_for_invalid_str_code():
 
 
 def test_currency_returns_same_instance_for_same_arguments():
+    # Test with iso currencyies
     usd1 = Currency(Ccy.USD)
     usd2 = Currency(Ccy.USD)
     usd3 = Currency.from_code("USD")
     assert usd2 is usd1
     assert usd3 is usd1
+
+    # Test with non-fiat currencies
+    tst1 = Currency(Xcy.TST)
+    tst2 = Currency(Xcy.TST)
+    tst3 = Currency.from_code("TST")
+    assert tst2 is tst1
+    assert tst3 is tst1
 
 
 def test_currency_is_iso():
@@ -52,7 +61,7 @@ def test_currency_is_iso():
 
 
 def test_get_xcy_def():
-    btc = Currency(Xcy.BTC)
-    xcy = btc._get_xcy_def()
+    tst = Currency(Xcy.TST)
+    xcy = tst._get_xcy_def()
 
-    assert type(xcy) is Xcy
+    assert xcy == Xcy.TST

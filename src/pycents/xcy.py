@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from typing import Any
 
 from pycents.exceptions import InvalidCurrencyError
 
@@ -51,6 +52,15 @@ class Xcy(metaclass=XcyMeta):
         self.minor_units = minor_units
         self.symbol = symbol
         self.ccy_num_code = num_code
+
+    @property
+    def value(self) -> tuple[Any, ...]:
+        return (
+            self.ccy_code,
+            self.ccy_name,
+            self.minor_units,
+            self.ccy_num_code,
+        )
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}.{self.ccy_code}"
