@@ -58,7 +58,7 @@ class StdFormatter(BaseFormatter):
             )
 
         symbol = _get_currency_code(currency, spec.ccy_display)
-        if not currency.is_iso and spec.ccy_display == "name":
+        if not currency._is_iso() and spec.ccy_display == "name":
             symbol = symbol.lower()
 
         if spec.ccy_display == "name":

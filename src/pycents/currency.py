@@ -38,8 +38,6 @@ class Currency:
     ccy_code: str = field(init=False)
     ccy_name: str = field(init=False, repr=False)
     minor_units: int = field(init=False, repr=False)
-    symbol: str = field(init=False, repr=False)
-    is_iso: str = field(init=False, repr=False)
     ccy_num_code: int = field(init=False, repr=False)
 
     _cache: ClassVar[dict[Ccy | Xcy, Currency]] = {}
@@ -60,13 +58,7 @@ class Currency:
         object.__setattr__(self, "ccy_code", ccy.ccy_code)
         object.__setattr__(self, "ccy_name", ccy.ccy_name)
         object.__setattr__(self, "minor_units", ccy.minor_units)
-        object.__setattr__(self, "is_iso", _is_iso)
         object.__setattr__(self, "ccy_num_code", ccy.ccy_num_code)
-        if isinstance(ccy, Xcy):
-            symbol = ccy.symbol
-        else:
-            symbol = ""
-        object.__setattr__(self, "symbol", symbol)
 
     @classmethod
     def from_code(cls, ccy: Xcy | Ccy | str) -> Currency:
@@ -105,3 +97,11 @@ class Currency:
             curr = ccy
 
         return cls(curr)
+
+    def _is_iso(self) -> bool:
+        return self.ccy_code in Ccy.__members__
+
+    def _get_xcy_def(self) -> Xcy:
+        if self._is_iso():
+            raise RuntimeError("Not an iso currency definition")
+        return Xcy[self.ccy_code]

@@ -51,9 +51,9 @@ def _get_currency_display_part(
 def _normalize_xcurrency_display(
     currency: Currency, locale: str, result: str, spec: FormatSpec
 ) -> str:
-    assert not currency.is_iso
+    assert not currency._is_iso()
     if spec.ccy_display == "symbol":
-        result = result.replace("€", currency.symbol)
+        result = result.replace("€", currency._get_xcy_def().symbol)
         # Some locales use EUR code instead of the symbol € for displaying
         # even if the formatter was build explicitly to use currency symbol
         result = result.replace("EUR", currency.ccy_code)
@@ -78,7 +78,7 @@ def _build_icu_currency_formatter(
     # Common formatter setup. When the currency is a custom currency
     # we use EUR as a placeholder currency, and replace the formatted
     # result symbol/code/name with the corresponding currency datas.
-    if not currency.is_iso:
+    if not currency._is_iso():
         iso_code = "EUR"
     else:
         iso_code = currency.ccy_code
@@ -187,12 +187,12 @@ class IcuFormatter(BaseFormatter):
             formatter = formatter.precision(precision_rule)
 
         str_result = str(formatter.formatDecimal(str(amount).encode("utf-8")).strip())
-        if not currency.is_iso:
+        if not currency._is_iso():
             if spec.ccy_display == "name":
                 ccy_part = _get_currency_display_part(amount, self.locale, currency)
                 str_result = str_result.replace(
                     ccy_part, currency.ccy_name.lower()
-                ).replace("€", currency.symbol)
+                ).replace("€", currency._get_xcy_def().symbol)
             else:
                 str_result = _normalize_xcurrency_display(
                     currency, self.locale, str_result, spec

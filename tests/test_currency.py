@@ -2,46 +2,31 @@ from dataclasses import astuple
 
 import pytest
 
-from pycents import Ccy, Currency
+from pycents import Ccy, Currency, Xcy
 from pycents.exceptions import InvalidCurrencyError
 
 
-@pytest.fixture
-def attributes():
-    def make_tuple(ccy):
-        return astuple(ccy)
-
-    return make_tuple
+def test_currency_new_has_expected_attr():
+    usd = Currency(Ccy.USD)
+    assert astuple(usd) == Ccy.USD.value
 
 
-def test_currency_new_has_expected_attr(attributes):
-    dollar = Currency(Ccy.USD)
-    assert dollar.ccy_code == Ccy.USD.ccy_code
-    assert dollar.ccy_name == Ccy.USD.ccy_name
-    assert dollar.symbol == ""
-    assert dollar.is_iso
-    assert dollar.minor_units == Ccy.USD.minor_units
-    assert dollar.ccy_num_code == Ccy.USD.ccy_num_code
+def test_currency_factory_with_str_arg():
+    usd = Currency.from_code("USD")
+    assert astuple(usd) == Ccy.USD.value
 
 
-def test_currency_factory_with_str_arg(attributes):
-    dollar = Currency.from_code("USD")
-    assert dollar.ccy_code == Ccy.USD.ccy_code
-    assert dollar.ccy_name == Ccy.USD.ccy_name
-    assert dollar.symbol == ""
-    assert dollar.is_iso
-    assert dollar.minor_units == Ccy.USD.minor_units
-    assert dollar.ccy_num_code == Ccy.USD.ccy_num_code
+def test_currency_factory_with_ccy_arg():
+    usd = Currency.from_code(Ccy.USD)
+    assert astuple(usd) == Ccy.USD.value
 
 
-def test_currency_factory_with_ccy_arg(attributes):
-    dollar = Currency.from_code(Ccy.USD)
-    assert dollar.ccy_code == Ccy.USD.ccy_code
-    assert dollar.ccy_name == Ccy.USD.ccy_name
-    assert dollar.symbol == ""
-    assert dollar.is_iso
-    assert dollar.minor_units == Ccy.USD.minor_units
-    assert dollar.ccy_num_code == Ccy.USD.ccy_num_code
+def test_currency_custom_xcy():
+    btc = Currency(Xcy.BTC)
+    assert btc.ccy_code == Xcy.BTC.ccy_code
+
+    other = Currency.from_code("BTC")
+    assert other is btc
 
 
 def test_currency_factory_raises_for_invalid_str_code():
@@ -51,8 +36,23 @@ def test_currency_factory_raises_for_invalid_str_code():
 
 
 def test_currency_returns_same_instance_for_same_arguments():
-    dollar1 = Currency(Ccy.USD)
-    dollar2 = Currency(Ccy.USD)
-    dollar3 = Currency.from_code("USD")
-    assert dollar2 is dollar1
-    assert dollar3 is dollar1
+    usd1 = Currency(Ccy.USD)
+    usd2 = Currency(Ccy.USD)
+    usd3 = Currency.from_code("USD")
+    assert usd2 is usd1
+    assert usd3 is usd1
+
+
+def test_currency_is_iso():
+    usd = Currency(Ccy.USD)
+    assert usd._is_iso()
+
+    btc = Currency(Xcy.BTC)
+    assert not btc._is_iso()
+
+
+def test_get_xcy_def():
+    btc = Currency(Xcy.BTC)
+    xcy = btc._get_xcy_def()
+
+    assert type(xcy) is Xcy

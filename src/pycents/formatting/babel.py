@@ -44,7 +44,7 @@ def _swap_euro_with_custom_currency(
     if spec.ccy_display == "hidden":
         return result
     elif spec.ccy_display == "symbol":
-        result = result.replace("€", currency.symbol)
+        result = result.replace("€", currency._get_xcy_def().symbol)
         result = result.replace("EUR", currency.ccy_code)
     elif spec.ccy_display == "iso":
         result = result.replace("EUR", currency.ccy_code)
@@ -64,7 +64,7 @@ def _adapt_pattern_to_xcurrency_minor_unit(
     # if currency is an ISO 4217 Currency and users
     # didn't request to trim insignificant zeros
     # do not change the pattern.
-    if currency.is_iso and not trim_trailing_zeros:
+    if currency._is_iso() and not trim_trailing_zeros:
         return pattern
 
     custom_pattern = re.sub(r"0([^0]*(?:;|$))", rf"0{fraction_part}\g<1>", base_pattern)
@@ -80,7 +80,7 @@ def _format_currency_name(
     rounding: RoundingMode = RoundingMode.HALF_EVEN,
     numbering_system: str = "latn",
 ) -> str:
-    code = "EUR" if not currency.is_iso else currency.ccy_code
+    code = "EUR" if not currency._is_iso() else currency.ccy_code
     if spec.accounting:
         raise InvalidFormatSpecError(
             "Cannot display currency name while using accounting format."
@@ -120,7 +120,7 @@ def _format_currency_symbol(
     rounding: RoundingMode = RoundingMode.HALF_EVEN,
     numbering_system: str = "latn",
 ) -> str:
-    code = currency.ccy_code if currency.is_iso else "EUR"
+    code = currency.ccy_code if currency._is_iso() else "EUR"
     if spec.compact and spec.accounting:
         raise InvalidFormatSpecError("Cannot mix compact and accounting format display")
     if not spec.compact:
@@ -306,7 +306,7 @@ class BabelFormatter(BaseFormatter):
                 f"Numbering system '{numbering_system}' is not supported "
                 f"by the Babel backend for locale '{self.locale}'"
             ) from None
-        if not currency.is_iso:
+        if not currency._is_iso():
             result = _swap_euro_with_custom_currency(
                 amount, result, currency, self.locale, spec
             )
