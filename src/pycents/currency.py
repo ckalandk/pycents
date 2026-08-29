@@ -90,7 +90,7 @@ class Currency:
         """
         if isinstance(ccy, str):
             code_upper = ccy.upper()
-            curr = Ccy.__members__.get(ccy) or getattr(Xcy, code_upper, None)
+            curr = Ccy.__members__.get(code_upper) or getattr(Xcy, code_upper, None)
             if curr is None:
                 raise InvalidCurrencyError(f"'{ccy}' is not a known currency code.")
         else:

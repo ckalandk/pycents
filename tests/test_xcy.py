@@ -21,21 +21,12 @@ def test_xcy_register_currency(monkeypatch):
     assert xcy.ccy_code == "HGC"
     assert xcy.ccy_name == "Holy Grail Coin"
     assert xcy.minor_units == 0
-    assert xcy.ccy_num_code == 0
+    assert xcy.ccy_num_code > 1000
 
 
-def test_xcy_register_override_existing_currency(monkeypatch):
-    registry = {}
-    monkeypatch.setattr(XcyMeta, "_registry", registry)
-
-    Xcy.register("HGC", "Holy Grail Coin", 0)
-    Xcy.register("HGC", "Silly Walk Credit", 2)
-
-    assert len(registry) == 1
-
-    xcy = Xcy.HGC
-    assert xcy.ccy_name == "Silly Walk Credit"
-    assert xcy.minor_units == 2
+def test_xcy_register_already_existing_currency():
+    with pytest.raises(InvalidCurrencyError):
+        Xcy.register("BTC", "This is the real bitcoin", 0)
 
 
 def test_xcy_getitem():

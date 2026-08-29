@@ -1,21 +1,31 @@
 from collections.abc import Iterator
-from typing import Any
 
 from pycents.exceptions import InvalidCurrencyError
+
+from .iso4217 import Ccy
 
 
 class XcyMeta(type):
     """An enum like meta class to hold custom currency registry"""
 
+    _counter = 1000
     _registry: dict[str, Xcy] = {}
 
     def register(
-        cls, code: str, name: str, minor_units: int, symbol: str = "", num_code: int = 0
+        cls,
+        code: str,
+        name: str,
+        minor_units: int,
+        symbol: str = "",
     ) -> None:
-        # TODO num_code should be unique for each currency,
-        # check num_code availability before registering a custom currency
         code_upper = code.upper()
-        cls._registry[code_upper] = Xcy(code_upper, name, minor_units, symbol, num_code)
+        if code_upper in Ccy.__members__ or code_upper in Xcy:
+            raise InvalidCurrencyError(f"{code_upper} is already defined")
+
+        cls._registry[code_upper] = Xcy(
+            code_upper, name, minor_units, symbol, XcyMeta._counter
+        )
+        XcyMeta._counter += 1
 
     def __getattr__(cls, name: str) -> Xcy:
         if name in cls._registry:
@@ -54,7 +64,7 @@ class Xcy(metaclass=XcyMeta):
         self.ccy_num_code = num_code
 
     @property
-    def value(self) -> tuple[Any, ...]:
+    def value(self) -> tuple[str | int, ...]:
         return (
             self.ccy_code,
             self.ccy_name,

@@ -11,14 +11,14 @@ from .rounding import RoundingMode
 
 __version__ = "1.1.0"
 
-Xcy.register("TST", "Test Coin", 2, "¤", 1000)
-Xcy.register("BTC", "Bitcoin", 8, "₿", 1001)
-Xcy.register("ETH", "Ethereum", 18, "Ξ", 1002)
-Xcy.register("USDT", "Tether", 6, "₮", 1003)
-Xcy.register("USDC", "USD Coin", 6, "$", 1004)
-Xcy.register("SOL", "Solana", 9, "◎", 1005)
-Xcy.register("XRP", "XRP", 6, "✕", 1006)
-Xcy.register("DOGE", "Degocoin", 8, "Ð", 1007)
+Xcy.register("TST", "Test Coin", 2, "¤")
+Xcy.register("BTC", "Bitcoin", 8, "₿")
+Xcy.register("ETH", "Ethereum", 18, "Ξ")
+Xcy.register("USDT", "Tether", 6, "₮")
+Xcy.register("USDC", "USD Coin", 6, "$")
+Xcy.register("SOL", "Solana", 9, "◎")
+Xcy.register("XRP", "XRP", 6, "✕")
+Xcy.register("DOGE", "Degocoin", 8, "Ð")
 
 __all__ = [
     # Core domain modeles
