@@ -32,6 +32,10 @@ class XcyMeta(type):
             return cls._registry[name]
         raise AttributeError(f"Custom currency '{name}' not registered in Xcy.")
 
+    def __delattr__(cls, name: str) -> None:
+        if name in cls._registry:
+            del cls._registry[name]
+
     def __getitem__(cls, name: str) -> Xcy:
         if name in cls._registry:
             return cls._registry[name]

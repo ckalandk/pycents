@@ -54,7 +54,6 @@ class Currency:
             raise TypeError(
                 f"Expected an instance of Ccy or Xcy, got {type(ccy).__name__}"
             )
-        _is_iso = isinstance(ccy, Ccy)
         object.__setattr__(self, "ccy_code", ccy.ccy_code)
         object.__setattr__(self, "ccy_name", ccy.ccy_name)
         object.__setattr__(self, "minor_units", ccy.minor_units)
@@ -91,6 +90,7 @@ class Currency:
         if isinstance(ccy, str):
             code_upper = ccy.upper()
             curr = Ccy.__members__.get(code_upper) or getattr(Xcy, code_upper, None)
+
             if curr is None:
                 raise InvalidCurrencyError(f"'{ccy}' is not a known currency code.")
         else:
@@ -99,7 +99,7 @@ class Currency:
         return cls(curr)
 
     def _is_iso(self) -> bool:
-        return self.ccy_code in Ccy.__members__
+        return self.ccy_num_code < 1000
 
     def _get_xcy_def(self) -> Xcy:
         if self._is_iso():
