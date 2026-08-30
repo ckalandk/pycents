@@ -5,9 +5,9 @@ from dataclasses import replace
 
 from pycents.exceptions import InvalidFormatSpecError
 
+from ..protocols import MonetaryAmount
 from .base_formatter import BaseFormatter
 from .formatspec import DisplayOpts, FormatSpec
-from .protocols import _SupportMoneyOperation
 from .std_formatter import StdFormatter
 
 _map_symbol: dict[str, DisplayOpts] = {"h": "hidden", "i": "iso", "n": "name"}
@@ -68,7 +68,7 @@ class MoneyFormatter:
             trim_trailing_zeros=match["trim"] is not None,
         ), match["rest"]
 
-    def format(self, money: _SupportMoneyOperation, format_spec: str) -> str:
+    def format(self, money: MonetaryAmount, format_spec: str) -> str:
         spec, rest = self._parse(format_spec)
         if spec is None:
             spec = replace(self.backend_formatter._default_spec)

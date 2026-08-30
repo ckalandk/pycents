@@ -354,6 +354,13 @@ def test_money_abs(n):
     assert abs(mny) == Money(abs(n), Currency.from_code("USD"))
 
 
+def test_money_bool_dunder():
+    zero = Money.zero("USD")
+    not_zero = Money.from_minor(1000, "USD")
+    assert not zero.__bool__()
+    assert not_zero.__bool__()
+
+
 @given(st.integers())
 def test_money_negation_is_additive_inverse(n):
     money = Money(n, currency=Currency(Ccy.USD))
@@ -445,11 +452,11 @@ def test_money_bulk_sum(money):
     assert isinstance(result, Money)
     assert result._amount == 49500
 
-    amounts[55] = amounts[55] * Decimal("1.5")
+    amounts[55] = amounts[55] * Decimal("1.53")
     result = Money.sum(amounts)
 
     assert isinstance(result, UnroundedMoney)
-    assert result._amount == Decimal("49775.0")
+    assert result._amount == Decimal("49791.50")
 
 
 def test_money_bulk_sum_rejects_empty_iterable():

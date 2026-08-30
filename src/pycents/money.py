@@ -10,7 +10,7 @@ from pycents.formatting import format as money_format
 from ._decimal import _decimal_places, _force_decimal, _trim_trailing_zeros
 from .currency import Ccy, Currency, Xcy
 from .exceptions import CurrencyMismatchError
-from .formatting.protocols import _SupportMoneyOperation
+from .protocols import MonetaryAmount
 from .rounding import RoundingMode, as_decimal_rounding
 
 __all__ = ["Money", "UnroundedMoney", "MoneyLike"]
@@ -22,7 +22,7 @@ type MoneyLike = Money | UnroundedMoney
 
 @total_ordering
 @final
-class UnroundedMoney(_SupportMoneyOperation):
+class UnroundedMoney(MonetaryAmount):
     """
     Class to hold any intermediate result of a Sub-Unit arithmetic
     expressions.
@@ -55,6 +55,10 @@ class UnroundedMoney(_SupportMoneyOperation):
     @property
     def currency(self) -> Currency:
         return self._currency
+
+    @property
+    def _as_decimal(self) -> Decimal:
+        return self._amount
 
     @classmethod
     def from_decimal(cls, amount: str | Decimal, currency: str) -> UnroundedMoney:
@@ -159,7 +163,7 @@ class UnroundedMoney(_SupportMoneyOperation):
 
 @total_ordering
 @final
-class Money(_SupportMoneyOperation):
+class Money(MonetaryAmount):
     """Represents an immutable monetary amount in a specific ISO 4217 currency.
 
     Monetary amounts are stored internally as an integer number of minor units
@@ -188,6 +192,10 @@ class Money(_SupportMoneyOperation):
 
     def __setattr__(self, name: str, value: object) -> None:
         raise AttributeError(f"{type(self).__name__} instances are immutable")
+
+    @property
+    def _as_decimal(self) -> Decimal:
+        return Decimal(self._amount)
 
     @classmethod
     def zero(cls, currency: Ccy | Xcy | str) -> Money:
@@ -334,7 +342,7 @@ class Money(_SupportMoneyOperation):
     @overload
     def __add__(self, other: UnroundedMoney) -> UnroundedMoney: ...
 
-    def __add__(self, other: MoneyLike) -> MoneyLike:
+    def __add__(self, other: MonetaryAmount) -> MonetaryAmount:
         if not isinstance(other, (Money, UnroundedMoney)):
             return NotImplemented
         if self._currency != other._currency:
@@ -354,7 +362,7 @@ class Money(_SupportMoneyOperation):
     @overload
     def __sub__(self, other: UnroundedMoney) -> UnroundedMoney: ...
 
-    def __sub__(self, other: MoneyLike) -> MoneyLike:
+    def __sub__(self, other: MonetaryAmount) -> MonetaryAmount:
         if not isinstance(other, Money):
             return NotImplemented
         return self + (-other)
@@ -375,7 +383,7 @@ class Money(_SupportMoneyOperation):
     @overload
     def __mul__(self, factor: Decimal) -> UnroundedMoney: ...
 
-    def __mul__(self, factor: int | Decimal) -> MoneyLike:
+    def __mul__(self, factor: int | Decimal) -> MonetaryAmount:
         if type(factor) is int:
             return Money(self._amount * factor, self._currency)
 
@@ -399,10 +407,14 @@ class Money(_SupportMoneyOperation):
     def __abs__(self) -> Money:
         return Money(abs(self._amount), self.currency)
 
+    def __bool__(self) -> bool:
+        """Return ``False`` if the monetary amount is zero."""
+        return self._amount != 0
+
     @classmethod
     def sum(
-        cls, iterable: Iterable[MoneyLike], *, rounding: RoundingMode | None = None
-    ) -> MoneyLike:
+        cls, iterable: Iterable[MonetaryAmount], *, rounding: RoundingMode | None = None
+    ) -> MonetaryAmount:
         """Bulk addition for Money."""
         iterator = iter(iterable)
         try:
@@ -411,16 +423,17 @@ class Money(_SupportMoneyOperation):
             raise ValueError(
                 "Expected an iterable of Moneys objects, got an empty iterable"
             ) from None
-        ccy = first_item._currency
-        total = first_item._amount
+        ccy = first_item.currency
+        total = first_item._as_decimal
         for item in iterator:
-            if item._currency != ccy:
+            if item.currency != ccy:
                 raise CurrencyMismatchError(
                     "Cannot add money amounts with different currencies."
                 )
-            total += item._amount
-        if isinstance(total, int):
-            return cls(total, ccy)
+            total += item._as_decimal
+        if total == total.to_integral_value():
+            return cls(int(total), ccy)
+
         unrounded = UnroundedMoney(Money.zero(ccy.ccy_code))
         unrounded._amount = total
         if rounding is not None:
@@ -502,8 +515,9 @@ class Money(_SupportMoneyOperation):
     def __str__(self) -> str:
         fmt = "{sign}{currency}\xa0{number}"
         sign = "-" if self._amount < 0 else ""
+        print(self.to_decimal())
         return fmt.format(
-            sign=sign, currency=self._currency.ccy_code, number=abs(self.to_decimal())
+            sign=sign, currency=self.currency.ccy_code, number=abs(self.to_decimal())
         )
 
     def __format__(self, format_spec: str) -> str:

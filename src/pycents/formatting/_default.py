@@ -16,10 +16,10 @@ from typing import Any, TypeVar
 
 from pycents.rounding import RoundingMode
 
+from ..protocols import MonetaryAmount
 from .base_formatter import BaseFormatter
 from .formatspec import DisplayOpts
 from .moneyformat import MoneyFormatter
-from .protocols import _SupportMoneyOperation
 from .std_formatter import StdFormatter
 
 
@@ -153,7 +153,7 @@ _BACKENDS = {
 _default = MoneyFormatter(formatter=StdFormatter())
 
 
-def format(money: _SupportMoneyOperation, format_spec: str) -> str:
+def format(money: MonetaryAmount, format_spec: str) -> str:
     """Formats a money-like object using the globally configured formatter.
 
     Args:

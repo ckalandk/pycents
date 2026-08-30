@@ -4,7 +4,10 @@ from typing import Protocol
 from pycents.currency import Currency
 
 
-class _SupportMoneyOperation(Protocol):
+class MonetaryAmount(Protocol):
+    @property
+    def _as_decimal(self) -> Decimal: ...
+
     @property
     def currency(self) -> Currency: ...
 
