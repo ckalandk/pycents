@@ -978,10 +978,11 @@ class TestBabelFormatter:
 
         assert result == "1.2K US dollars"
 
+    @pytest.mark.parametrize("display", ["symbol", "iso"])
     def test_formatter_rejects_combining_compact_and_accounting_formats(
-        self, babel_formatter, usd
+        self, babel_formatter, usd, display
     ):
-        spec = FormatSpec(accounting=True, compact=True)
+        spec = FormatSpec(accounting=True, compact=True, ccy_display=display)
         with pytest.raises(
             InvalidFormatSpecError,
             match="Cannot mix compact and accounting format display",
@@ -1111,7 +1112,11 @@ class TestBabelFormatter:
 
     def test_configure(self, babel_formatter):
         babel_formatter.configure(
-            compact=True, compact_precision=3, accounting=True, group_separator=False
+            compact=True,
+            compact_precision=3,
+            accounting=True,
+            group_separator=False,
+            trim_trailing_zeros=True,
         )
         expected = FormatSpec(
             ccy_display="symbol",
@@ -1119,6 +1124,7 @@ class TestBabelFormatter:
             compact_precision=3,
             accounting=True,
             group_separator=False,
+            trim_trailing_zeros=True,
         )
 
         assert babel_formatter._default_spec == expected

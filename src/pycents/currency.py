@@ -13,25 +13,26 @@ __all__ = ["Currency", "Ccy", "Xcy"]
 @dataclass(frozen=True, slots=True)
 class Currency:
     """
-    Represents an ISO 4217 currency.
+    Represents an ISO 4217 currency or a custom currency.
 
     A Currency object provides metadata associated with an ISO 4217
     currency code, including its alphabetic code, numeric code, name,
-    and number of minor units. Currency instances are immutable and
-    cached internally, meaning that constructing the same currency
-    multiple times returns the same object.
+    and number of minor units, the same metadas are also provided for custom
+    currencies. Currency instances are immutable and
+    cached internally.
 
     Attributes
     ----------
     ccy_code : str
-        The three-letter ISO 4217 alphabetic currency code (e.g. ``"USD"``).
+        The alphabetic currency code (e.g. ``"USD"``).
     ccy_name : str
-        The official ISO 4217 currency name (e.g. ``"US Dollar"``).
+        The Currency name (e.g. ``"US Dollar"``).
     minor_units : int
         The number of decimal places used by the currency.
         For example, USD uses two minor units while JPY uses none.
     ccy_num_code : int
-        The ISO 4217 numeric currency code.
+        The ISO 4217 numeric currency code. Custom currencies
+        also receive a unique numerical code.
     """
 
     ccy: InitVar[Ccy | Xcy]
@@ -62,13 +63,13 @@ class Currency:
     @classmethod
     def from_code(cls, ccy: Xcy | Ccy | str) -> Currency:
         """
-        Construct a Currency instance from an ISO 4217 currency code.
+        Construct a Currency instance from a currency code.
 
         Parameters
         ----------
         ccy : Xcy | Ccy | str
-            Either a member of the ``Ccy`` enumeration or a three-letter
-            ISO 4217 alphabetic currency code.
+            Either a member of the ``Ccy``/``Xcy`` or a
+            an alphabetic currency code (e.g. ``"USD"``, ``"USDT"``).
 
         Returns
         -------
@@ -78,14 +79,14 @@ class Currency:
         Raises
         ------
         ValueError
-            If the supplied string is not a valid ISO 4217 currency code.
+            If the supplied string is not a valid currency code.
 
         Examples
         --------
         >>> Currency.from_code(Ccy.USD)
         Currency(ccy_code='USD')
-        >>> Currency.from_code("USD")
-        Currency(ccy_code='USD')
+        >>> Currency.from_code("BTC")
+        Currency(ccy_code='BTC')
         """
         if isinstance(ccy, str):
             code_upper = ccy.upper()
@@ -103,5 +104,5 @@ class Currency:
 
     def _get_xcy_def(self) -> Xcy:
         if self._is_iso():
-            raise RuntimeError("Not an iso currency definition")
+            raise ValueError("Cannot get Xcy definition for an ISO currency")
         return Xcy[self.ccy_code]

@@ -111,6 +111,23 @@ class TestStdFormatter:
         )
         assert result == expected
 
+    @pytest.mark.parametrize(
+        "trim, amount, expected",
+        [
+            (True, Decimal("225.50"), "USD\xa0225.5"),
+            (False, Decimal("225.50"), "USD\xa0225.50"),
+            (True, Decimal("225.12345000"), "USD\xa0225.12345"),
+        ],
+    )
+    def test_trim_trailing_zeros(self, trim, amount, expected, std_formatter):
+        result = std_formatter.format(
+            amount,
+            Currency.from_code("USD"),
+            FormatSpec(ccy_display="iso", trim_trailing_zeros=trim),
+        )
+
+        assert result == expected
+
     # Rounding Policies
 
     @pytest.mark.parametrize(

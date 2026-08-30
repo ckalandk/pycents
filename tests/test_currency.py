@@ -14,6 +14,11 @@ def test_currency_new_has_expected_attr():
     assert astuple(tst) == Xcy.TST.value
 
 
+def test_currency_init_reject_non_valid_currencies():
+    with pytest.raises(TypeError, match="Expected an instance of Ccy or Xcy"):
+        _ = Currency("USD")  # type: ignore
+
+
 def test_currency_factory_with_str_arg():
     usd = Currency.from_code("USD")
     assert astuple(usd) == Ccy.USD.value
@@ -65,3 +70,9 @@ def test_get_xcy_def():
     xcy = tst._get_xcy_def()
 
     assert xcy == Xcy.TST
+
+
+def test_get_xcy_def_reject_ccy_args():
+    test = Currency(Ccy.USD)
+    with pytest.raises(ValueError, match="Cannot get Xcy definition"):
+        _ = test._get_xcy_def()

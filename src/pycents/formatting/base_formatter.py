@@ -50,10 +50,16 @@ class BaseFormatter(ABC):
         compact_precision: int | None = None,
         accounting: bool | None = None,
         group_separator: bool | None = None,
+        trim_trailing_zeros: bool | None = None,
         rounding: RoundingMode | None = None,
     ) -> None:
         self._default_spec.update(
-            ccy_display, compact, compact_precision, accounting, group_separator
+            ccy_display,
+            compact,
+            compact_precision,
+            accounting,
+            group_separator,
+            trim_trailing_zeros,
         )
         if rounding is not None:
             self._rounding = rounding

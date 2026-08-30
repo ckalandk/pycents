@@ -257,7 +257,10 @@ def test_config_ignored_with_spec(monkeypatch):
     monkeypatch.setattr(formatter, "_default_spec", temp_spec)
 
     formatting.get_formatter().configure(
-        compact=True, compact_precision=2, ccy_display="hidden", group_separator=True
+        compact=True,
+        compact_precision=2,
+        ccy_display="hidden",
+        group_separator=True,
     )
     mny = Money.from_major("2123.95", "USD")
     result = formatting.format(mny, "")
