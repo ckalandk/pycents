@@ -209,6 +209,34 @@ class Money(_SupportMoneyOperation):
         return cls._zero_cache[code]
 
     @classmethod
+    def from_minor(cls, amount: int, currency: Ccy | Xcy | str) -> Money:
+        """Construct a Money instance from an amount expressed in minor units.
+
+        Args:
+            amount: The monetary amount expressed in minor units (e.g cents).
+            currency: Either a member of the ``Ccy``/``Xcy``,
+                or a three-letter ISO 4217 currency code.
+            rounding: The rounding policy if the decimal/float has more decimals then
+                the currency minor unit.
+
+        Returns:
+            The corresponding Money instance.
+
+        Notes:
+            This method is equivalent to calling the Money constructor after
+            resolving the currency from its code.
+
+            Unlike the constructor, from_minor() accepts a currency code as a
+            string in addition to a Ccy or Xcy instance.
+
+            For example:
+
+            `Money.from_minor(100, "EUR")` is equivalent to `Money(100, Ccy.EUR)`.
+        """
+        ccy = Currency.from_code(currency)
+        return cls(amount, ccy)
+
+    @classmethod
     def from_major(
         cls,
         amount: int | str | Decimal,
@@ -220,10 +248,10 @@ class Money(_SupportMoneyOperation):
 
         Args:
             amount: The monetary amount expressed in major units.
-            currency: Either a member of the ``Ccy`` enumeration
+            currency: Either a member of the ``Ccy``/``Xcy``,
                 or a three-letter ISO 4217 currency code.
             rounding: The rounding policy if the decimal/float has more decimals then
-                the currency supports
+                the currency minor unit.
 
         Returns:
             The corresponding Money instance.

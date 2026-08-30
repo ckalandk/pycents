@@ -29,6 +29,25 @@ def test_xcy_register_already_existing_currency():
         Xcy.register("BTC", "This is the real bitcoin", 0)
 
 
+def test_xcy_del_currency(monkeypatch):
+    registry = {}
+
+    monkeypatch.setattr(XcyMeta, "_registry", registry)
+    Xcy.register("HGC", "Holy Grail Coin", 0)
+    Xcy.register("BKG", "Biggus Creditus", 2)
+
+    assert "HGC" in Xcy
+    assert "BKG" in Xcy
+
+    assert len(registry) == 2
+
+    del Xcy.BKG
+
+    assert len(registry) == 1
+    assert "HGC" in Xcy
+    assert "BKG" not in Xcy
+
+
 def test_xcy_getitem():
     xcy = Xcy["TST"]
     assert Xcy.TST == xcy

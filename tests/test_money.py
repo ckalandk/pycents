@@ -70,6 +70,21 @@ def test_money_init(minor_units, currency):
     assert money._currency == currency
 
 
+@pytest.mark.parametrize(
+    "minor_units, currency",
+    [
+        pytest.param(100, "USD"),
+        pytest.param(123456000, "EUR"),
+        pytest.param(-100, "JPY"),
+    ],
+)
+def test_money_from_minor(minor_units, currency):
+    money = Money.from_minor(minor_units, currency)
+
+    assert money.minor_units == minor_units
+    assert money.currency.ccy_code == currency
+
+
 def test_money_instances_are_immutable(money):
     with pytest.raises(AttributeError, match="Money instances are immutable"):
         money()._amount = 1000
