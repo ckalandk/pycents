@@ -4,6 +4,38 @@ Quick Start
 
 This guide introduces the most common operations you'll perform with PyCents.
 
+Currency
+========
+
+Currencies are represented by the ``Currency`` class.
+A ``Currency`` instance can hold either an **ISO 4217** currency
+or a custom currency.
+
+There are two ways to construct a ``Currency`` instance
+
+* **Using the constructor**: pass a member of ``Ccy`` for ISO 4217 currencies
+  or ``Xcy`` for custom currencies.
+
+.. code-block:: python
+
+    >>> from pycents import Currency, Ccy
+
+    >>> usd = Currency(Ccy.USD)
+    >>> usd
+    Currency(ccy_code='USD')
+    >>> bitcoin = Currency(Xcy.BTC)
+    >>> bitcoin
+    Currency(ccy_code='BTC')
+
+
+.. note::
+
+    `Xcy` comes with a selection of popular cryptocurrencies pre-registered,
+    including Bitcoin and Ethereum, so they can be used directly without
+    any additional setup.
+    For information on registering your own custom currencies,
+    see the :ref:`Custom Currencies <custom_currency>`..
+
 Creating money
 ==============
 
@@ -14,6 +46,8 @@ Create money from minor units (The currency smallest unit e.g cents):
     from pycents import Money, Currency
 
     wallet = Money(1250, Currency.from_code("USD"))
+
+    bitcoins = Money(2000000, Currency.from_code("BTC"))
 
 `wallet` represents a value of 1250 cents in USD.
 
@@ -87,7 +121,7 @@ Think of it this way:
 
     You rarely need to instantiate ``UnroundedMoney`` directly. As shown above,
     standard ``Money`` objects automatically convert to ``UnroundedMoney`` when
-    multiplyed/divided by Decimals. But if you ever feel the need to construct
+    multiplyed/divided by Decimals. But if you ever need to construct
     an ``UnroundedMoney`` instance directly, use ``from_decimal`` method.
     See the example below:
 
@@ -218,9 +252,8 @@ allocation without ever loosing a penny in the process.
 .. note::
 
     The function ``allocate`` use the **Hamilton** apportionment strategy to distribute
-    the leftover cents. See :ref:`guide-allocation` for a detailed breakdown.
-
-.. _format-specification:
+    the leftover cents. See :ref:`Allocation <guide-allocation>`..
+    for a detailed breakdown.
 
 Formatting
 ==========
@@ -243,24 +276,29 @@ Locale-aware formatting is also available through optional formatting backends.
     USD 30.0M
     >>> print(f"{price:.3c}")  # Retain 3 decimals
     USD 29.990M
+    >>> print(f"{price:.3c~}") # Trim trailing zeros
+    USD 29.99M
     >>> print(f"{price:hc}")  # Hide currency symbol and use compact format
     30.0M
     >>> price = -price
     >>> print(f"{price:a}")  # Use accounting format
     (USD 29,990,005.00)
 
+.. _format-specification:
+
 The format specification are parsed according to this grammar:
 
 .. code-block:: text
 
     money-format ::= money-spec string-format
-    money-spec   ::= [display] [compact-precision] [compact] [accounting] [ungroup]
+    money-spec ::= [display] [compact-prec] [compact] [accounting] [ungroup] [trim]
 
     display      ::= h | i | n
-    compact-precision ::= .integer
+    compact-prec ::= .integer
     compact      ::= c
     accounting   ::= a
     ungroup      ::= u
+    trim         ::= ~
 
 Display options:
 ----------------
@@ -275,6 +313,8 @@ Display options:
   (for example, ``(123.45)`` instead of ``-123.45``).
 * **u**: Disable digit grouping
   (for example, ``1000000`` instead of ``1,000,000``).
+* **~**: Trim insignificant trailing zeros
+  (e.g ``3.5`` instead of ``3.50``)
 
 Localized Money Formatting
 -------------------------------
@@ -302,7 +342,7 @@ function from the ``formatting`` module.
     print(f"{money}")  # Output: $2600
 
 By default, ``babel`` or ``icu`` use the host environment to determine
-the locale to use, see the following example on how to explictly choose a locale:
+the locale to use, see the following example on how to explicitly choose a locale:
 
 .. code-block:: python
 
@@ -314,10 +354,15 @@ the locale to use, see the following example on how to explictly choose a locale
     money = Money.from_major(2600, "USD")
     print(f"{money}") # --> 2 600,00 $US
 
+.. caution::
+
+    Locale configuration should be done after backend selection
+    via ``formatting.use_backend`` function.
+
 Next steps
 ==========
 
-Continue with the :doc:`User Guide </guide/index>` for a detailed explanation of::
+Continue with the :doc:`User Guide </guide/index>` for a detailed explanation of:
 
 * Creating money
 * Arithmetic

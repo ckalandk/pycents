@@ -1,21 +1,244 @@
-=====
-Money
-=====
+====================
+Money and Currencies
+====================
 
-.. warning::
-   **Under Construction**
-
-   This section is currently under heavy development.
-   You can still read this section, but some parts are missing or not fully explained.
-
-The ``Money`` class represents a monetary amount expressed in a specific ISO 4217 currency.
+The ``Money`` class represents a monetary amount expressed in a specific ISO 4217 currency
+or a custom currency.
 
 A ``Money`` instance combines two pieces of information:
 
-* a monetary amount stored internally in **minor units** (for example, cents) which is
-  stored internally as an `int`,
+* a monetary amount represented internally as an ``int`` number of
+  **minor units** (for example, cents)
 * a currency represented by a ``Currency`` instance.
 
+So before diving into ``Money`` inner working, let's pick up where we left off
+in the :doc:`Quickstart</quick_start/quickstart>` and take a closer look at currencies.
+
+
+Currency
+========
+
+The ``Currency`` class represents a currency used by ``Money``. A currency can be
+either an ISO 4217 currency or a custom currency.
+
+Internally, ``pycents`` maintains two collections of currency definitions:
+
+* ``Ccy`` contains the currencies defined by ISO 4217.
+* ``Xcy`` contains custom currencies registered by the user.
+
+Although ``Ccy`` is a regular Python enum, ``Xcy`` is an enum-like class implemented
+by pycents. Both provide a type-safe way of referring to a currency definition.
+
+Users are generally **not expected to interact directly with ``Ccy`` or ``Xcy``**.
+They serve two purposes: they provide a database-like collection of available
+currency definitions, and they provide a strongly typed argument for constructing
+``Currency`` instances.
+
+Creating a Currency
+-------------------
+
+A Currency can be constructed by passing a member of ``Ccy`` or ``Xcy``:
+
+.. code-block:: python
+
+    >>> from pycents import Currency, Ccy, Xcy
+
+    >>> euro = Currency(Ccy.EUR)
+    >>> bitcoin = Currency(Xcy.BTC)
+
+The constructor deliberately does not accept a string currency code,
+
+.. code-block:: python
+
+    >>> Currency("EUR")
+    TypeError: ...
+
+This is intentional. ``Currency`` constructors are strongly typed and are designed
+to accept currency definitions rather than arbitrary values.
+
+.. note::
+
+    This is a recurring theme in ``pycents``, almost all constructors are strongly
+    typed and convenient constructions are offered through classmethods
+
+When convenient construction from a currency code is desired, use
+:meth:`Currency.from_code` instead:
+
+.. code-block:: python
+
+    >>> euro = Currency.from_code("EUR")
+    >>> bitcoin = Currency.from_code("BTC")
+
+``Currency.from_code`` accepts either a currency definition or a string code:
+
+.. code-block:: python
+
+    Currency.from_code(Ccy.EUR)
+    Currency.from_code(Xcy.BTC)
+    Currency.from_code("EUR")
+    Currency.from_code("BTC")
+
+Currency information
+--------------------
+
+A ``Currency`` instance exposes the information associated with its currency
+definition.
+
+For example:
+
+.. code-block:: python
+
+    >>> euro.ccy_code
+    'EUR'
+    >>> euro.ccy_name
+    'Euro'
+    >>> euro.minor_units
+    2
+    >>> euro.ccy_num_code
+    978
+
+For a custom currency such as Bitcoin:
+
+.. code-block:: python
+
+    >>> bitcoin.ccy_code
+    'BTC'
+    >>> bitcoin.ccy_name
+    'Bitcoin'
+    >>> bitcoin.minor_units
+    8
+    >>> bitcoin.symbol
+    '₿'
+
+The main attributes are:
+
+* ``ccy_code``
+
+The currency code. For ISO 4217 currencies this is the standard three-letter
+ISO code. For custom currencies it is the code assigned when the currency is
+registered.
+
+* ``ccy_name``
+
+The name of the currency.
+
+* ``minor_units``
+
+The number of decimal places used to represent the currency's minor units.
+
+* ``ccy_num_code``
+
+An integer numeric code associated with the currency. For ISO 4217 currencies
+this is the ISO numeric code. Custom currencies are also assigned a unique
+numerical code.
+
+.. note::
+
+    Currency instances are immutable and cached internally.
+
+.. _custom_currency:
+
+Custom currencies
+-----------------
+
+Custom currencies are stored in ``Xcy``. Several cryptocurrencies are registered
+by default, but applications can also register their own currencies.
+
+A custom currency is registered with :meth:`Xcy.register`:
+
+.. code-block:: python
+
+    >>> from pycents import Xcy, Money, formatting
+
+    >>> Xcy.register(
+    ...     code="HGC",
+    ...     name="Holy Grail Coin",
+    ...     minor_units=2,
+    ...     symbol="🍷",
+    ... )
+    >>> formatting.use_backend("babel")
+    >>> mny = Money.from_major("2000", "HGC")
+    >>> print(f"{mny}")
+    🍷2,000.00
+
+Once registered, the currency can be accessed through ``Xcy`` just like an enum
+member:
+
+.. code-block:: python
+
+    >>> Xcy.HGC
+    Xcy.HGC
+
+It can also be accessed using subscription syntax:
+
+.. code-block:: python
+
+    >>> Xcy["HGC"]
+    Xcy.HGC
+
+The ``in`` operator can be used to check whether a currency is registered:
+
+.. code-block:: python
+
+    >>> "BTC" in Xcy
+    True
+    >>> Xcy.HGC in Xcy
+    True
+    >>> "XYZ" in Xcy
+    False
+
+``Xcy`` is also iterable:
+
+.. code-block:: python
+
+    >>> for xcy in Xcy:
+    ...     print(xcy)
+    Xcy.BTC
+    Xcy.ETH
+    Xcy.EHG
+    ...
+
+Overriding Custom Currency Definition
+-------------------------------------
+
+Registering a currency with a code that is already present in ``Xcy`` or ``Ccy``
+**raises an exception**.
+
+.. code-block:: python
+
+    >>> from pycents import Xcy
+
+    >>> Xcy.register(
+    ...     code="BTC",
+    ...     name="Genuine bitcoin",
+    ...     minor_units=8,
+    ...     symbol="₿",
+    ... )
+
+    InvalidCurrencyError: 'BTC' is already defined
+
+
+If you want to provide currency metadata localized to a particular
+language or domain for an already registered currency, the only way around
+is to delete it an register it again under different name.
+
+.. code-block:: python
+
+    >>> from pycents import Xcy
+
+    >>> del Xcy.BTC
+
+    >>> Xcy.register(
+    ...     code="BTC",
+    ...     name="Genuine bitcoin",
+    ...     minor_units=8,
+    ...     symbol="₿",
+    ... )
+
+Money
+=====
+
+``Money`` is the central class of **PyCents**.
 
 Immutability
 ------------
@@ -39,9 +262,8 @@ Creating money
 From minor units using ``Money`` constructor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Creating a ``Money`` instance using the constructor requires instantiating
-a ``Currency`` object explicitly, either by using its constructor with
-a ``Ccy`` enum, or ``Currency.from_code()`` with a ``Ccy`` enum or code string.
+Creating a ``Money`` instance using the constructor requires an integer
+amount expressed in minor units and a Currency instance.
 
 .. code-block:: python
 
@@ -49,17 +271,28 @@ a ``Ccy`` enum, or ``Currency.from_code()`` with a ``Ccy`` enum or code string.
     >>> price = Money(1999, Currency(Ccy.USD))
     >>> print(price)
     USD 19.99
-    >>> price = Money(1999, Currency.from_code("USD"))
+    >>> price = Money(1999, Currency.from_code("BTC"))
+    >>> print(price)
+    BTC 0.00001999
+
+From minor units using ``Money.from_minor`` factory
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This factory method is equivalent to calling the Money constructor after
+resolving the currency from its code.
+
+Unlike the constructor, ``from_minor()`` accepts a currency code as a
+string in addition to a ``Ccy`` or ``Xcy`` instance.
+
+.. code-block:: python
+
+    from pycents import Money, Currency, Ccy
+    >>> price = Money.from_minor(1999, Currency(Ccy.USD))
     >>> print(price)
     USD 19.99
-
-``Currency`` instances are cached internally for subsequent use.
-
-.. note::
-
-    ``Currency`` contains other standard informations that you might find
-    useful. See the API documentation for [#TODO reference to Currency API doc].
-
+    >>> price = Money.from_minor(1999, "BTC")
+    >>> print(price)
+    BTC 0.00001999
 
 From major units
 ^^^^^^^^^^^^^^^^
@@ -85,21 +318,25 @@ The value is converted to minor units according to the currency's
 number of decimal places.
 
 The class method ``from_major`` accepts an optional third keyword argument that
-represents the rounding mode to apply when the money amount has more fractional digits
+specifies the rounding mode to apply when the monetary amount has more fractional digits
 than the currency supports. If omitted, the rounding policy defaults to **round half even**.
 
-The Rounding Policies are provided through the enum ``RoundingPolicy``
+The version of ``from_major`` that performs rounding should only be used when
+the monetary amount originates from an external source, and must be converted
+to valid Monetary amount immediatly.
+
+The Rounding Policies are provided through the enum ``RoundingMode``
 from the ``pycents.rounding`` package. See :doc:`/guide/rounding`.
 
 .. code-block:: python
 
     # USD Supports only two fractional digits
-    >>> from pycents.rounding import RoundingPolicy
+    >>> from pycents.rounding import RoundingMode
 
-    >>> price = Money.from_major(150.756, "USD")
+    >>> price = Money.from_major("150.756", "USD")
     >>> print(price)
     USD 150.76
-    >>> price = Money.from_major(150.754, "USD", rounding=RoundingPolicy.DOWN)
+    >>> price = Money.from_major("150.754", "USD", rounding=RoundingMode.DOWN)
     >>> print(price)
     USD 150.75
 
@@ -200,7 +437,7 @@ Sub-Unit arithmetics
 
 Operations that introduce fractional minor units and preserve sub-unit precision.
 
-This type of operations do not produce an actual ``Money`` instance. ``PyCents``
+This type of operations does not produce an actual ``Money`` instance. ``PyCents``
 uses a special type ``UnroundedMoney`` to hold the result of this type of operations,
 maintaining the full precision of the calculation while ignoring completely
 the currency's standard minor units.
@@ -216,8 +453,8 @@ the default rounding mode **round half even**.
 
 .. code-block:: python
 
-    >>> salary = Money.from_major(1500.45, "USD")
-    >>> bonified_salary = (salary * 1.3).round() # round half even
+    >>> salary = Money.from_major("1500.45", "USD")
+    >>> bonified_salary = (salary * Decimal("1.3")).round() # round half even
     >>> print(bonified_salary)
     USD 1950.58
 
@@ -229,10 +466,9 @@ Arithmetic operations work according to this rules
 
 .. code-block:: text
 
-    Money + Money = Mone
-    Money - Money = Money
-    Money + Unrounded = Unrounded
-    Unrounded + Unrounded = Unrounded
+    Money +/- Money = Money
+    Money +/- Unrounded = Unrounded
+    Unrounded +/- Unrounded = Unrounded
     Money * IntegerFactor = Money
     Money * DecimalFactor = Unrounded
     Money / Factor = Unrounded
@@ -242,40 +478,175 @@ Arithmetic operations work according to this rules
 Converting an `UnroundedMoney` instance to `Money` via the `round` method,
 must be performed at the very end of the arithmetic pipeline.
 
-.. warning::
+Decimal precision and implicit rounding
+---------------------------------------
 
-    Although no implicit rounding is performed at the library level, python
-    Decimal might still implicitly round when the amount exceed the Decimal
-    default precision. Consider the case where you need to multiply a `Money`
-    instance by the Decimal `Decimal(1)/3`, since this number has infinite
-    decimals, it will be rounded to fit within the Decimal default precision.
-    If you need tight control over what rounding mode is used by python Decimal, or
-    completely rejects this implicit rounding, consider wrapping any arithmetics involving
-    `UnroundedMoney` objects within a  `decimal.localcontext` context manager. See the example
-    below:
+``PyCents`` does not perform implicit rounding at the library level.
+However, arithmetic involving ``UnroundedMoney``, which uses Python's Decimal internally,
+is still subject to the active decimal context.
+In particular, the context's precision can cause Decimal operations
+to round their results implicitly.
+
+This is especially important when working with currencies that have a
+large number of decimal places, such as cryptocurrencies whose smallest
+units may correspond to 18 or more decimal places.
+In such cases, the default Decimal precision can be exhausted much more
+easily than it would be with conventional fiat currencies.
+
+A typical example is when the result of an operation yield an amount
+with infinite decimals. Consider the following case:
 
 .. code-block:: python
 
-    from pycents import Money
+    from decimal import Decimal
+
+    mny = Money(10, Currency.from_code("USD"))
+    unr = mny / Decimal(3)
+
+The exact decimal expansion of ``10 / 3`` is infinite. Because Decimal arithmetic
+is performed under a finite precision context, the result must be rounded
+according to the active context. This rounding happens inside Decimal
+itself and is therefore invisible to ``pycents``.
+
+Some operations produce results whose exact decimal representation is infinite.
+Such results cannot be represented exactly by a finite-precision Decimal,
+so Python must round them according to the active decimal context.
+The only thing you can do in this situation is controlling
+the rounding mode used by Python:
+
+.. code-block:: python
+
+    from pycents import Money, Currency
     from pycents.rounding import RoundingMode, as_decimal_rounding
     from decimal import Decimal, localcontext
 
-    mny = Money.from_major(10, "USD")
+    mny = Money(10, Currency.from_code("USD"))
     with localcontext() as ctx:
         ctx.rounding = as_decimal_rounding(RoundingMode.UP)
         factor = Decimal(3)
         unr = mny / factor
         print(unr)
 
-.. danger::
-    Whenever a number is involved be it in arithmetic operations or methods (like `Money.from_major`),
-    PyCents use either an `int` when it is appropriate, an `str` representing an exact decimal number
-    or a python Decimal as an argument, but never use `floats`. if you use `float` as an argument, the type checker will
-    scream at you, but the code will run without any errors. PyCents doesn't enforce the ban on `float`, but
-    you must be aware that you should never use `floats` in financial/accounting softwares!
+Controlling Decimal precision
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When working with custom currencies that require a large number
+of decimal places, you should consider increasing the precision
+of the active Decimal context.
+
+For example:
+
+.. code-block:: python
+
+    from decimal import getcontext
+    from pycents import Money, RoundingMode
+
+    # Increase the precision of the current Decimal context
+    getcontext().prec = 80
+    # Ethereum supports up to 18 decimals
+    mny = Money.from_minor(34990000000000000005, "ETH")
+    ...
+
+Alternatively, you can limit the increased precision to a specific
+section of code by using ``decimal.localcontext()``:
+
+.. code-block:: python
+
+    from decimal import Decimal, localcontext
+
+    with localcontext() as ctx:
+        ctx.prec = 100
+        ...
+
+Detecting implicit rounding
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You can configure the Decimal context to raise an exception
+whenever an operation would require rounding under the active Decimal context.:
+
+.. code-block:: python
+
+    from decimal import Decimal, Inexact, localcontext
+
+    mny = Money(100, Currency.from_code("USD"))
+
+    with localcontext() as ctx:
+        ctx.traps[Inexact] = True
+        # Raises decimal.Inexact because 100 / 3
+        # cannot be represented exactly.
+        unr = mny / Decimal(3)
+
+This is in my opinion often the safest approach.
+Instead of silently accepting a rounded intermediate result,
+the calculation fails immediately and gives you the opportunity
+to decide how the operations should be handled.
+
+You can then either:
+
+* **Choose an explicit rounding policy** when the operation yields
+  result with infinitely many decimals.
+
+* **Increase the Decimal precision** when the operation is finite but
+  requires more digits than the default ``Decimal`` context precision.
+
+.. note::
+
+    This behavior might change in the near future
+
+Avoid Floating-Point Numbers
+----------------------------
+
+When working with monetary values, **never use Python `float` to represent an amount**.
+
+PyCents accepts exact numeric representations for monetary amounts:
+
+* `int` when the value is an integer;
+* `str` representing an exact decimal number;
+* `Decimal` for decimal arithmetic.
+
+For example:
+
+.. code-block:: python
+
+    from decimal import Decimal
+    from pycents import Money
+
+    Money.from_major("10.50", "EUR")
+    Money.from_major(Decimal("10.50"), "EUR")
+    Money.from_major(10, "EUR")
+
+
+Avoid passing a `float`:
+
+.. code-block:: python
+
+    Money.from_major(10.50, "EUR")  # Don't do this
+
+Floating-point arithmetic is inherently imprecise. Using `float` in scientific
+calculation is perfectly valid, but not in financial applications where every
+cent must be accounted for.
+
+.. code-block:: python
+
+    >>> 0.1 + 0.2
+    0.30000000000000004
+
+
+``PyCents`` does not reject `float` values at runtime. However, its type annotations
+deliberately do not include `float`, so a static type checker such as **mypy** or
+**Pyright** will report an error when a float is passed to an API expecting an
+exact monetary value.
+
+This is intentional: ``PyCents`` relies on the type system to help prevent
+accidental use of floating-point numbers while avoiding unnecessary runtime restrictions.
+
+.. attention::
+
+    **Rule of thumb:** if a number represents money, use
+    `int`, `str`, or `Decimal` — **never `float`**.
 
 Bulk summation
-^^^^^^^^^^^^^^
+--------------
 
 If you find yourself doing a lot of summation inside a tight loop, consider
 using `Money.sum` classmethod to perform a bulk summation which is more efficient

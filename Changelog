@@ -1,5 +1,25 @@
 # Changelog
 
+## Version 1.2.0
+
+I am happy to announce that **PyCents** added supports for crypto
+and custom currencies.
+
+### Features
+
+* Added the `Xcy` enum-like class for cryptocurrencies and custom currencies.
+* Added pre-registered definitions for popular cryptocurrencies.
+* Added custom currency registration through `Xcy.register`.
+* Integrated custom currencies seamlessly with the locale-aware formatting engine.
+
+### Docs
+
+* Improve the documentation & and add section on custom currencies usage.
+
+### Misc
+
+* Add factory method `from_minor` to construct `Money` instance from minor units.
+
 ## Version 1.1.0
 
 ### Features

@@ -14,19 +14,25 @@
 </div>
 
 **pycents** is a strongly typed Python library for representing and manipulating monetary
-values with ISO 4217-compliant currencies and explicit rounding semantics and rich formatting options.
+values with ISO 4217 and custom currencies, explicit rounding semantics and rich formatting options.
 
-* **ISO 4217 compliance** — currencies are represented with their standardized codes and minor-unit definitions, while Money uses integer minor units for exact monetary representation.
+* **ISO 4217 & custom currencies**: built-in support for ISO 4217 currencies with standardized codes and minor-unit definitions. Custom currencies such as cryptocurrencies can be
+registered at runtime. Some **popular cryptocurrencies are pre-registered and ready to use**.
+
+* **Money uses integer minor units for exact monetary representation.**
 
 * **Explicit rounding** — PyCents use a dual-type architecture for exact and high-precision operations:
   * `Money` The core immutable type that stores exact monetary values as integer minor units (e.g., cents).
   * `UnroundedMoney`: A high-precision type designed for complex intermediate calculations without premature rounding.
-  * **Seamless Integration**: Both types work together fluidly in arithmetic. Calling `.round()` on an `UnroundedMoney` instance explicitly converts it back into standard Money.
+  * **Seamless Integration**: Both types work together fluidly in arithmetic. Calling `.round()` on an `UnroundedMoney` instance explicitly converts it back into standard `Money`.
 
 ## Features
 
-* 100% Test Coverage & Property-Based Testing: Fully covered and rigorously verified using   Hypothesis to guarantee mathematical invariants.
+* 100% Test Coverage & Property-Based Testing: Fully covered and rigorously
+  verified using **Hypothesis** to guarantee mathematical invariants.
 * ISO 4217 currency definitions
+* Custom currency support with runtime registration
+* Pre-registered popular cryptocurrencies
 * Immutable `Money` type
 * Precise decimal arithmetic
 * Explicit rounding semantics.
