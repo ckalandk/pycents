@@ -400,6 +400,10 @@ class Money(MonetaryAmount):
 
     def __truediv__(self, factor: int | Decimal | Money) -> Decimal | UnroundedMoney:
         if isinstance(factor, Money):
+            if self.currency != factor.currency:
+                raise CurrencyMismatchError(
+                    "Cannot divide money amounts with different currencies"
+                )
             return Decimal(self._amount) / Decimal(factor._amount)
         unrounded = UnroundedMoney(self) / factor
         return unrounded

@@ -377,6 +377,22 @@ def test_money_add_and_sub_are_compatible(n, m):
     assert right + result == left
 
 
+def test_money_truediv_when_both_operands_are_money_objects():
+    a = Money(5, currency=Currency(Ccy.USD))
+    b = Money(2, currency=Currency(Ccy.USD))
+
+    result = a / b
+    assert result == Decimal("2.5")
+
+
+def test_money_truediv_raises_when_operands_have_different_currencies():
+    a = Money(5, currency=Currency(Ccy.USD))
+    b = Money(2, currency=Currency(Ccy.EUR))
+
+    with pytest.raises(CurrencyMismatchError):
+        _ = a / b
+
+
 @pytest.mark.parametrize(
     "money_,expected",
     [
@@ -617,7 +633,7 @@ class Test_Unrounded_Money:
         assert (mny * left) * right == mny * (left * right)
 
     @given(mny=_any_money_unrounded(), factor=non_zero_decimals)
-    def test_division(self, mny, factor):
+    def test_true_division(self, mny, factor):
         result = mny / factor
         assert result._amount == mny._amount / factor
 
