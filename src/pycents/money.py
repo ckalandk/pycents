@@ -14,11 +14,7 @@ from .exceptions import CurrencyMismatchError
 from .protocols import MonetaryAmount
 from .rounding import RoundingMode, as_decimal_rounding
 
-__all__ = ["Money", "UnroundedMoney", "MoneyLike"]
-
-
-# Type Aliases
-type MoneyLike = Money | UnroundedMoney
+__all__ = ["Money", "UnroundedMoney"]
 
 
 @total_ordering
@@ -97,7 +93,7 @@ class UnroundedMoney(MonetaryAmount):
     def to_decimal(self) -> Decimal:
         return self.as_majors
 
-    def __add__(self, other: MoneyLike) -> UnroundedMoney:
+    def __add__(self, other: MonetaryAmount) -> UnroundedMoney:
         if not isinstance(other, (UnroundedMoney, Money)):
             return NotImplemented
         if self._currency != other._currency:
@@ -113,7 +109,7 @@ class UnroundedMoney(MonetaryAmount):
         new._amount = -self._amount
         return new
 
-    def __sub__(self, other: MoneyLike) -> UnroundedMoney:
+    def __sub__(self, other: MonetaryAmount) -> UnroundedMoney:
         if not isinstance(other, (UnroundedMoney, Money)):
             return NotImplemented
         if self._currency != other._currency:
@@ -123,7 +119,7 @@ class UnroundedMoney(MonetaryAmount):
         new._amount = self._amount - other._amount
         return new
 
-    def __rsub__(self, other: MoneyLike) -> UnroundedMoney:
+    def __rsub__(self, other: MonetaryAmount) -> UnroundedMoney:
         return -(self - other)
 
     def __mul__(self, factor: int | Decimal) -> UnroundedMoney:
