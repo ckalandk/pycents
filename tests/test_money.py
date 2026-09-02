@@ -85,6 +85,20 @@ def test_money_from_minor(minor_units, currency):
     assert money.currency.ccy_code == currency
 
 
+def test_money_minor_units_deprecated():
+    with pytest.deprecated_call():
+        money = Money(100, currency=Currency(Ccy.USD))
+        assert money.minor_units == 100
+        assert money.as_minors == 100
+
+
+def test_money_to_decimal_deprecated():
+    with pytest.deprecated_call():
+        money = Money.from_major(Decimal("12.34"), "USD")
+        assert money.to_decimal() == Decimal("12.34")
+        assert money.as_majors == Decimal("12.34")
+
+
 def test_money_instances_are_immutable(money):
     with pytest.raises(AttributeError, match="Money instances are immutable"):
         money()._amount = 1000
@@ -553,10 +567,16 @@ class Test_Unrounded_Money:
 
         assert unrounded.currency == Currency.from_code("USD")
 
-    def test_from_decimal(self):
+    def test_from_major(self):
         unrounded = UnroundedMoney.from_major(Decimal("2.99"), "USD")
         assert unrounded._currency.ccy_code == "USD"
         assert unrounded._amount == Decimal("299")
+
+    def test_from_decimal_deprecated(self, money):
+        with pytest.deprecated_call():
+            unrounded = UnroundedMoney.from_decimal(Decimal("2.99"), "USD")
+            assert unrounded._currency.ccy_code == "USD"
+            assert unrounded._amount == Decimal("299")
 
     @pytest.mark.parametrize(
         "amount, currency, expected",
@@ -565,9 +585,16 @@ class Test_Unrounded_Money:
             (Decimal("12312.99"), "JPY", Decimal("12312.99")),
         ],
     )
-    def test_to_decimal(self, amount, currency, expected):
+    def test_as_majors(self, amount, currency, expected):
         unrounded = UnroundedMoney.from_major(amount, currency)
         assert unrounded.as_majors == expected
+
+    def test_to_decimal_deprecated(self, money):
+        money = UnroundedMoney.from_major("12.34", "USD")
+
+        with pytest.deprecated_call():
+            assert money.to_decimal() == Decimal("12.34")
+            assert money.as_majors == Decimal("12.34")
 
     def test_str_dunder_method(self, money):
         unrounded = UnroundedMoney.from_major("2.123", "USD")
@@ -696,6 +723,27 @@ class Test_Unrounded_Money:
     def test_lt_comparision_with_non_money_objects(self):
         a = UnroundedMoney.from_major(Decimal("2"), "EUR")
         assert a.__lt__(object()) is NotImplemented
+
+    def test_abs(self):
+        a = UnroundedMoney.from_major(Decimal("-2"), "EUR")
+        result = abs(a)
+        assert result.as_majors == Decimal("2")
+
+        zero = UnroundedMoney.from_major(Decimal("0"), "EUR")
+        result = abs(zero)
+        assert result._amount == Decimal("0")
+
+    def test_bool_dunder(self):
+        a = UnroundedMoney.from_major(Decimal("2"), "EUR")
+        assert bool(a) is True
+
+        zero = UnroundedMoney.from_major(Decimal("0"), "EUR")
+        assert bool(zero) is False
+
+    def test_hash(self):
+        a = UnroundedMoney.from_major(Decimal("2"), "EUR")
+        result = hash(a)
+        assert result == hash((Decimal("200"), Currency.from_code("EUR")))
 
     def test_repr(self):
         a = UnroundedMoney.from_major(Decimal("2"), "EUR")

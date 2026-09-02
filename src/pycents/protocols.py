@@ -8,7 +8,7 @@ class MonetaryAmount(Protocol):
     @property
     def _as_decimal(self) -> Decimal:
         """Return the amount as a Decimal for internal arithmetic."""
-        ...
+        ...  # pragma: no cover
 
     @property
     def currency(self) -> Currency: ...
