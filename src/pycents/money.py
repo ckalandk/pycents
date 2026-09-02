@@ -223,9 +223,7 @@ class Money(MonetaryAmount):
         Args:
             amount: The monetary amount expressed in minor units (e.g cents).
             currency: Either a member of the ``Ccy``/``Xcy``,
-                or a three-letter ISO 4217 currency code.
-            rounding: The rounding policy if the decimal/float has more decimals then
-                the currency minor unit.
+                or an alphabetic currency code.
 
         Returns:
             The corresponding Money instance.
@@ -250,39 +248,51 @@ class Money(MonetaryAmount):
         amount: int | str | Decimal,
         currency: Ccy | Xcy | str,
         *,
-        rounding: RoundingMode = RoundingMode.HALF_EVEN,
+        rounding: RoundingMode | None = None,
     ) -> Money:
         """Construct a Money instance from an amount expressed in major units.
 
         Args:
             amount: The monetary amount expressed in major units.
             currency: Either a member of the ``Ccy``/``Xcy``,
-                or a three-letter ISO 4217 currency code.
-            rounding: The rounding policy if the decimal/float has more decimals then
-                the currency minor unit.
+                or an alphabetic currency code.
+            rounding: The rounding mode to use if the amount has more
+                fractional digits than the currency supports.
+                If ``None``, an exception is raised when the amount cannot
+                be represented exactly.
 
         Returns:
             The corresponding Money instance.
 
+        Raises:
+            ValueError: If ``amount`` is not finite, or if it has more fractional digits
+            than the currency supports and no ``rounding`` mode was specified.
+
         Note:
-            The input amount will be rounded to accommodate for the currency's
-            standard minor units. The rounding mode is constrolled via the
-            keyword argument `rounding`. If no rounding is supplied,
-            `RoundingMode.HALF_EVEN` will be used.
+            ``Money`` only represents amounts that can be expressed exactly
+            using the currency's standard minor units. If the input amount has more
+            fractional digits than the currency supports, an explicit rounding mode
+            must be supplied.
+            When ``rounding`` is ``None``, the input is rejected rather than being
+            rounded implicitly.
 
         Examples
         --------
         >>> Money.from_major(Decimal("29.34"), "USD")
-        Money(amount=2934, currency='USD')
-        >>> Money.from_major(Decimal("29.345", "USD", rounding=RoundingPolicy.UP))
-        Money(amount=2935, currency='USD')
-        >>> Money.from_major(29.99, Ccy.USD)
-        Money(amount=2999, currency='USD')
+        Money(2934, 'USD')
+        >>> Money.from_major(Decimal("29.345"), "USD")
+        Traceback (most recent call last):
+        ...
+        ValueError: Amount 29.345 has more fractional digits ...
+        >>> Money.from_major(Decimal("29.345"), "USD", rounding=RoundingPolicy.UP))
+        Money(2935, 'USD')
+        >>> Money.from_major("29.99", Ccy.USD)
+        Money(2999, 'USD')
         """
         decimal_amount = _force_decimal(amount)
         ccy = Currency.from_code(currency)
         decimal_amount = cls._validate_amount(decimal_amount, ccy, rounding)
-        if decimal_amount == 0:
+        if decimal_amount.is_zero():
             return cls.zero(currency)
         minor_units = int(decimal_amount * (10**ccy.minor_units))
         return cls(minor_units, currency=ccy)
@@ -291,14 +301,25 @@ class Money(MonetaryAmount):
     def _validate_amount(
         amount: Decimal,
         currency: Currency,
-        rounding: RoundingMode = RoundingMode.HALF_EVEN,
+        rounding: RoundingMode | None = None,
     ) -> Decimal:
         if not amount.is_finite():
             raise ValueError(f"Special/infinite values are forbidden: {amount}")
         exponent = _decimal_places(amount)
-        if exponent > currency.minor_units:
-            exp = Decimal("1").scaleb(-currency.minor_units)
-            amount = amount.quantize(exp, rounding=as_decimal_rounding(rounding))
+
+        if exponent <= currency.minor_units:
+            return amount
+
+        if rounding is None:
+            raise ValueError(
+                f"Amount {amount} has more fractional digits than the "
+                f"{currency.ccy_code} minor units: {currency.minor_units}.\n"
+                "Specify a rounding mode to convert it to a valid monetary amount."
+            )
+
+        exp = Decimal("1").scaleb(-currency.minor_units)
+        amount = amount.quantize(exp, rounding=as_decimal_rounding(rounding))
+
         return amount
 
     @property
@@ -314,6 +335,27 @@ class Money(MonetaryAmount):
     def minor_units(self) -> int:
         """
         The monetary amount expressed in minor units.
+
+        Returns:
+            The amount stored internally as an integer number of minor units.
+        """
+        return self._amount
+
+    @property
+    def as_majors(self) -> Decimal:
+        """Return the monetary amount expressed in major currency units.
+
+        This is the preferred way to access the amount in major units.
+        Use this property instead of :meth:`to_decimal`.
+        """
+        return self.to_decimal()
+
+    @property
+    def as_minors(self) -> int:
+        """Return the monetary amount expressed in minor currency units.
+
+        This is the preferred way to access the amount in minor units.
+        Use this property instead of :attr:`minor_units`.
 
         Returns:
             The amount stored internally as an integer number of minor units.
@@ -398,7 +440,7 @@ class Money(MonetaryAmount):
     @overload
     def __truediv__(self, factor: int | Decimal) -> UnroundedMoney: ...
 
-    def __truediv__(self, factor: int | Decimal | Money) -> Decimal | UnroundedMoney:
+    def __truediv__(self, factor: int | Decimal | Money) -> MonetaryAmount | Decimal:
         if isinstance(factor, Money):
             if self.currency != factor.currency:
                 raise CurrencyMismatchError(
@@ -519,7 +561,6 @@ class Money(MonetaryAmount):
     def __str__(self) -> str:
         fmt = "{sign}{currency}\xa0{number}"
         sign = "-" if self._amount < 0 else ""
-        print(self.to_decimal())
         return fmt.format(
             sign=sign, currency=self.currency.ccy_code, number=abs(self.to_decimal())
         )

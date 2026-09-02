@@ -127,7 +127,7 @@ def test_money_with_zero_amounts_are_cached():
         ),
     ],
 )
-def test_from_major(amount, currency, expected):
+def test_money_from_major(amount, currency, expected):
     money = Money.from_major(amount, currency)
     assert money.minor_units == expected
 
@@ -160,6 +160,14 @@ def test_from_major_round_numbers_with_more_then_minor_unit_decimals(
 ):
     mny = Money.from_major(amount, currency, rounding=RoundingMode.UP)
     assert mny.to_decimal() == expected
+
+
+def test_money_from_major_raises_when_no_rounding_is_provided():
+    with pytest.raises(
+        ValueError,
+        match="Amount 29.345 has more fractional digits than the USD minor units",
+    ):
+        Money.from_major(Decimal("29.345"), "USD")
 
 
 @pytest.mark.parametrize(
