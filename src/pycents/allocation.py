@@ -117,12 +117,12 @@ def allocate_base(
     Raises:
         ValueError: If validation of the money amount or ratios fails.
     """
-    _validate_allocation_args(money.minor_units, ratios)
+    _validate_allocation_args(money.as_minors, ratios)
     total_ratio = sum(ratios)
-    remainder = money._amount
+    remainder = money.as_minors
     result = []
     for ratio in ratios:
-        share = (money._amount * ratio) // total_ratio
+        share = (money.as_minors * ratio) // total_ratio
         result.append(Money(share, money._currency))
         remainder -= share
     return result, Money(remainder, money._currency)
@@ -152,6 +152,6 @@ def allocate(
     Raises:
         ValueError: If validation of the money amount or ratios fails.
     """
-    _validate_allocation_args(money.minor_units, ratios)
-    shares = strategy(money._amount, ratios)
+    _validate_allocation_args(money.as_minors, ratios)
+    shares = strategy(money.as_minors, ratios)
     return [Money(amount, money._currency) for amount in shares]

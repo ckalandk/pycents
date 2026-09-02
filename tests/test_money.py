@@ -66,7 +66,7 @@ def rounding(draw):
 def test_money_init(minor_units, currency):
     money = Money(minor_units, currency=currency)
 
-    assert money.minor_units == minor_units
+    assert money.as_minors == minor_units
     assert money._currency == currency
 
 
@@ -81,7 +81,7 @@ def test_money_init(minor_units, currency):
 def test_money_from_minor(minor_units, currency):
     money = Money.from_minor(minor_units, currency)
 
-    assert money.minor_units == minor_units
+    assert money.as_minors == minor_units
     assert money.currency.ccy_code == currency
 
 
@@ -129,7 +129,7 @@ def test_money_with_zero_amounts_are_cached():
 )
 def test_money_from_major(amount, currency, expected):
     money = Money.from_major(amount, currency)
-    assert money.minor_units == expected
+    assert money.as_minors == expected
 
 
 @pytest.mark.parametrize(
@@ -159,7 +159,7 @@ def test_from_major_round_numbers_with_more_then_minor_unit_decimals(
     amount, currency, expected
 ):
     mny = Money.from_major(amount, currency, rounding=RoundingMode.UP)
-    assert mny.to_decimal() == expected
+    assert mny.as_majors == expected
 
 
 def test_money_from_major_raises_when_no_rounding_is_provided():
@@ -287,7 +287,7 @@ def test_money_add_return_expected_amount(n, m):
     left = Money(n, currency=Currency(Ccy.USD))
     right = Money(m, currency=Currency(Ccy.USD))
     result = left + right
-    assert result.minor_units == n + m
+    assert result.as_minors == n + m
 
 
 @given(
@@ -334,7 +334,7 @@ def test_money_sub_return_expected_amount(n, m):
     left = Money(n, currency=Currency(Ccy.USD))
     right = Money(m, currency=Currency(Ccy.USD))
     result = left - right
-    assert result.minor_units == n - m
+    assert result.as_minors == n - m
 
 
 @given(st.integers())
@@ -342,7 +342,7 @@ def test_money_sub_is_zero_when_operands_are_equal(n):
     left = Money(n, currency=Currency(Ccy.USD))
     right = Money(n, currency=Currency(Ccy.USD))
     result = left - right
-    assert result.minor_units == 0
+    assert result.as_minors == 0
 
 
 def test_money_sub_not_implemented_for_non_money(money):
@@ -353,7 +353,7 @@ def test_money_sub_not_implemented_for_non_money(money):
 def test_money_negation(n):
     money = Money(n, currency=Currency(Ccy.USD))
 
-    assert (-money).minor_units == -n
+    assert (-money).as_minors == -n
 
 
 @given(st.integers(min_value=-10, max_value=10))
@@ -426,8 +426,8 @@ def test_money_truediv_raises_when_operands_have_different_currencies():
         ),
     ],
 )
-def test_money_to_decimal(money_, expected):
-    assert money_.to_decimal() == expected
+def test_money_as_majors(money_, expected):
+    assert money_.as_majors == expected
 
 
 @pytest.mark.parametrize(
@@ -554,7 +554,7 @@ class Test_Unrounded_Money:
         assert unrounded.currency == Currency.from_code("USD")
 
     def test_from_decimal(self):
-        unrounded = UnroundedMoney.from_decimal(Decimal("2.99"), "USD")
+        unrounded = UnroundedMoney.from_major(Decimal("2.99"), "USD")
         assert unrounded._currency.ccy_code == "USD"
         assert unrounded._amount == Decimal("299")
 
@@ -566,23 +566,23 @@ class Test_Unrounded_Money:
         ],
     )
     def test_to_decimal(self, amount, currency, expected):
-        unrounded = UnroundedMoney.from_decimal(amount, currency)
-        assert unrounded.to_decimal() == expected
+        unrounded = UnroundedMoney.from_major(amount, currency)
+        assert unrounded.as_majors == expected
 
     def test_str_dunder_method(self, money):
-        unrounded = UnroundedMoney.from_decimal("2.123", "USD")
+        unrounded = UnroundedMoney.from_major("2.123", "USD")
         result = str(unrounded)
         assert result == f"{unrounded.currency.ccy_code}\xa02.123"
 
     def test_format_dunder_method(self):
-        unrounded = UnroundedMoney.from_decimal("2.123", "USD")
+        unrounded = UnroundedMoney.from_major("2.123", "USD")
         result = unrounded.__format__("h")
         assert result == "2.123"
 
     def test_negation(self):
-        positive = UnroundedMoney.from_decimal("2.123", "USD")
-        zero = UnroundedMoney.from_decimal("0", "USD")
-        negative = UnroundedMoney.from_decimal("-2.123", "USD")
+        positive = UnroundedMoney.from_major("2.123", "USD")
+        zero = UnroundedMoney.from_major("0", "USD")
+        negative = UnroundedMoney.from_major("-2.123", "USD")
 
         assert -zero == zero
         assert -positive == negative
@@ -619,7 +619,7 @@ class Test_Unrounded_Money:
         assert result._amount == factor * mny._amount
 
     def test_reverse_multiplication(self):
-        unrounded = UnroundedMoney.from_decimal(Decimal("12.99"), "USD")
+        unrounded = UnroundedMoney.from_major(Decimal("12.99"), "USD")
         result = Decimal("2.99") * unrounded
         assert isinstance(result, UnroundedMoney)
         assert result._amount == Decimal("1299") * Decimal("2.99")
@@ -663,13 +663,13 @@ class Test_Unrounded_Money:
             _ = unrounded / Decimal("0")
 
     def test_equality_with_any_object(self):
-        unrounded = UnroundedMoney.from_decimal(Decimal("2.99"), "USD")
+        unrounded = UnroundedMoney.from_major(Decimal("2.99"), "USD")
         result = unrounded.__eq__(object())
         assert result is NotImplemented
 
     def test_equality_with_difference_currencies(self):
-        left = UnroundedMoney.from_decimal(Decimal("2.99"), "USD")
-        right = UnroundedMoney.from_decimal(Decimal("2.99"), "EUR")
+        left = UnroundedMoney.from_major(Decimal("2.99"), "USD")
+        right = UnroundedMoney.from_major(Decimal("2.99"), "EUR")
 
         assert not (left == right)
 
@@ -682,23 +682,23 @@ class Test_Unrounded_Money:
         ],
     )
     def test_lt_comparison(self, left, right, expected):
-        a = UnroundedMoney.from_decimal(left, "USD")
-        b = UnroundedMoney.from_decimal(right, "USD")
+        a = UnroundedMoney.from_major(left, "USD")
+        b = UnroundedMoney.from_major(right, "USD")
 
         assert (a < b) == expected
 
     def test_lt_comparison_with_different_currencies(self):
-        a = UnroundedMoney.from_decimal(Decimal("2"), "USD")
-        b = UnroundedMoney.from_decimal(Decimal("3"), "EUR")
+        a = UnroundedMoney.from_major(Decimal("2"), "USD")
+        b = UnroundedMoney.from_major(Decimal("3"), "EUR")
         with pytest.raises(CurrencyMismatchError):
             _ = a < b
 
     def test_lt_comparision_with_non_money_objects(self):
-        a = UnroundedMoney.from_decimal(Decimal("2"), "EUR")
+        a = UnroundedMoney.from_major(Decimal("2"), "EUR")
         assert a.__lt__(object()) is NotImplemented
 
     def test_repr(self):
-        a = UnroundedMoney.from_decimal(Decimal("2"), "EUR")
+        a = UnroundedMoney.from_major(Decimal("2"), "EUR")
         result = repr(a)
         assert result == f"Unrounded({Decimal('200')}, 'EUR')"
 

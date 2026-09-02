@@ -72,7 +72,7 @@ def test_money_format_forward_amount_and_currency_code(formatter):
     money = Money.from_major("12.34", "USD")
     assert format(money, "") == "dummy"
 
-    assert formatter.calls[0]["amount"] == money.to_decimal()
+    assert formatter.calls[0]["amount"] == money.as_majors
     assert formatter.calls[0]["currency"] == Currency.from_code("USD")
 
 

@@ -4,6 +4,7 @@ from collections.abc import Callable, Iterable
 from decimal import Decimal
 from functools import total_ordering
 from typing import Any, Self, final, overload
+from warnings import deprecated
 
 from pycents.formatting import format as money_format
 
@@ -57,22 +58,44 @@ class UnroundedMoney(MonetaryAmount):
         return self._currency
 
     @property
+    def as_majors(self) -> Decimal:
+        """Return the monetary amount expressed in major currency units.
+
+        Unlike ``Money``, the returned amount may contain more fractional
+        digits than the currency's standard minor unit.
+
+        Returns:
+        The amount expressed in major currency units.
+        """
+        mn_unit = self._currency.minor_units
+        exponent = Decimal("1").scaleb(-mn_unit)
+        ret = Decimal(self._amount) * exponent
+        return _trim_trailing_zeros(ret)
+
+    @property
     def _as_decimal(self) -> Decimal:
         return self._amount
 
     @classmethod
-    def from_decimal(cls, amount: str | Decimal, currency: str) -> UnroundedMoney:
+    @deprecated("use 'from_major()' instead")
+    def from_decimal(
+        cls, amount: int | str | Decimal, currency: str | Ccy | Xcy
+    ) -> UnroundedMoney:
+        return cls.from_major(amount, currency)
+
+    @classmethod
+    def from_major(
+        cls, amount: int | str | Decimal, currency: str | Ccy | Xcy
+    ) -> UnroundedMoney:
         amount = _force_decimal(amount)
         new = cls.__new__(cls)
         new._currency = Currency.from_code(currency)
         new._amount = amount * (10**new._currency.minor_units)
         return new
 
+    @deprecated("Use the 'as_majors' property instead.")
     def to_decimal(self) -> Decimal:
-        mn_unit = self._currency.minor_units
-        exponent = Decimal("1").scaleb(-mn_unit)
-        ret = Decimal(self._amount) * exponent
-        return _trim_trailing_zeros(ret)
+        return self.as_majors
 
     def __add__(self, other: MoneyLike) -> UnroundedMoney:
         if not isinstance(other, (UnroundedMoney, Money)):
@@ -151,11 +174,23 @@ class UnroundedMoney(MonetaryAmount):
             )
         return self._amount < other._amount
 
+    def __abs__(self) -> UnroundedMoney:
+        new = self.__class__.__new__(self.__class__)
+        new._currency = self._currency
+        new._amount = abs(self._amount)
+        return new
+
+    def __bool__(self) -> bool:
+        return self._amount != 0
+
+    def __hash__(self) -> int:
+        return hash((self._amount, self._currency))
+
     def __repr__(self) -> str:
         return f"Unrounded({self._amount}, '{self._currency.ccy_code}')"
 
     def __str__(self) -> str:
-        return f"{self._currency.ccy_code}\xa0{self.to_decimal()}"
+        return f"{self._currency.ccy_code}\xa0{self.as_majors}"
 
     def __format__(self, format_spec: str) -> str:
         return money_format(self, format_spec)
@@ -164,7 +199,8 @@ class UnroundedMoney(MonetaryAmount):
 @total_ordering
 @final
 class Money(MonetaryAmount):
-    """Represents an immutable monetary amount in a specific ISO 4217 currency.
+    """Represents an immutable monetary amount in a specific ISO 4217 currency
+    or a custom one.
 
     Monetary amounts are stored internally as an integer number of minor units
     (for example, cents for USD). Arithmetic and comparison operations are only
@@ -332,6 +368,7 @@ class Money(MonetaryAmount):
         return self._currency
 
     @property
+    @deprecated("Use the 'as_minors' property instead.")
     def minor_units(self) -> int:
         """
         The monetary amount expressed in minor units.
@@ -343,12 +380,28 @@ class Money(MonetaryAmount):
 
     @property
     def as_majors(self) -> Decimal:
-        """Return the monetary amount expressed in major currency units.
-
-        This is the preferred way to access the amount in major units.
-        Use this property instead of :meth:`to_decimal`.
         """
-        return self.to_decimal()
+        Convert the monetary amount to its major-unit representation.
+
+        The returned Decimal always uses the exact number of fractional digits
+        defined by the currency's minor units.
+
+        Returns:
+            The amount expressed in major units.
+
+        Examples
+        --------
+        >>> Money(2934, Currency(Ccy.USD)).as_majors
+        Decimal('29.34')
+        >>> Money(29, Currency(Ccy.JPY)).as_majors
+        Decimal('29')
+        >>> Money(29123, Currency(Ccy.KWD)).as_majors
+        Decimal('29.123')
+        """
+        mn_unit = self._currency.minor_units
+        exponent = Decimal("1").scaleb(-mn_unit)
+        ret = Decimal(self._amount) * exponent
+        return ret
 
     @property
     def as_minors(self) -> int:
@@ -361,6 +414,64 @@ class Money(MonetaryAmount):
             The amount stored internally as an integer number of minor units.
         """
         return self._amount
+
+    @deprecated("Use the 'as_majors' property instead.")
+    def to_decimal(self) -> Decimal:
+        """
+        Convert the monetary amount to its major-unit representation.
+
+        The returned Decimal always uses the exact number of fractional digits
+        defined by the currency's minor units.
+
+        Returns:
+            The amount expressed in major units.
+
+        Notes:
+            This method is deprecated. Use the 'as_majors' property instead.
+        """
+        return self.as_majors
+
+    def as_dict(self) -> dict[str, Any]:
+        return {"minor_units": self._amount, "currency": self._currency.ccy_code}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Money:
+        """Reconstruct a Money instance from a dictionary payload."""
+        return cls(data["minor_units"], Currency.from_code(data["currency"]))
+
+    def cash(self, rounding: Callable[[int], int]) -> Money:
+        """Applies a custom cash-rounding strategy to the minor units amount.
+
+        This is useful for physical cash transaction where the total must be
+        rounded to the nearest physical coin denomination.
+
+        For example, following the phase-out of the penny in Canada in 2013
+        (and the United States in february 2025), cash transactions are required to be
+        rounded to the nearest 5 cents (nickel), while electronic transactions
+        continue to be processed to the exact cent.
+
+        Note:
+            Thanks to the random guy from discord that brought this case to my
+            attention
+
+        Args:
+            rounding: A function that takes the current minor unit as an integer
+            and returns the newly rounded minor unit amount
+
+        Returns:
+            A Money instance containing the rounded amount with the same currency
+
+        Examples:
+            >>> # Canadian cash rounding (nearest 5 cents)
+            >>> def cad_round_cash(amount: int) -> int:
+            ...     return int(round(amount / 5.0) * 5)
+            ...
+            >>> total = Money.from_major("12.03", "USD")
+            >>> cash = total.cash(cand_round_cash)
+            >>> print(cash)
+        """
+        amount = rounding(self._amount)
+        return Money(amount, self._currency)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Money):
@@ -405,7 +516,7 @@ class Money(MonetaryAmount):
     def __sub__(self, other: UnroundedMoney) -> UnroundedMoney: ...
 
     def __sub__(self, other: MonetaryAmount) -> MonetaryAmount:
-        if not isinstance(other, Money):
+        if not isinstance(other, (Money, UnroundedMoney)):
             return NotImplemented
         return self + (-other)
 
@@ -428,10 +539,9 @@ class Money(MonetaryAmount):
     def __mul__(self, factor: int | Decimal) -> MonetaryAmount:
         if type(factor) is int:
             return Money(self._amount * factor, self._currency)
-
         return UnroundedMoney(self) * factor
 
-    def __rmul__(self, factor: int | Decimal) -> MoneyLike:
+    def __rmul__(self, factor: int | Decimal) -> MonetaryAmount:
         return self * factor
 
     @overload
@@ -486,72 +596,6 @@ class Money(MonetaryAmount):
             return unrounded.round(rounding)
         return unrounded
 
-    def to_decimal(self) -> Decimal:
-        """
-        Convert the monetary amount to its major-unit representation.
-
-        The returned Decimal always uses the exact number of fractional digits
-        defined by the currency's minor units.
-
-        Returns:
-            The amount expressed in major units.
-
-        Examples
-        --------
-        >>> Money(2934, Currency(Ccy.USD)).to_decimal()
-        Decimal('29.34')
-        >>> Money(29, Currency(Ccy.JPY)).to_decimal()
-        Decimal('29')
-        >>> Money(29123, Currency(Ccy.KWD)).to_decimal()
-        Decimal('29.123')
-        """
-        mn_unit = self._currency.minor_units
-        exponent = Decimal("1").scaleb(-mn_unit)
-        ret = Decimal(self._amount) * exponent
-        return ret
-
-    def as_dict(self) -> dict[str, Any]:
-        return {"minor_units": self._amount, "currency": self._currency.ccy_code}
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Money:
-        """Reconstruct a Money instance from a dictionary payload."""
-        return cls(data["minor_units"], Currency.from_code(data["currency"]))
-
-    def cash(self, rounding: Callable[[int], int]) -> Money:
-        """Applies a custom cash-rounding strategy to the minor units amount.
-
-        This is useful for physical cash transaction where the total must be
-        rounded to the nearest physical coin denomination.
-
-        For example, following the phase-out of the penny in Canada in 2013
-        (and the United States in february 2025), cash transactions are required to be
-        rounded to the nearest 5 cents (nickel), while electronic transactions
-        continue to be processed to the exact cent.
-
-        Note:
-            Thanks to the random guy from discord that brought this case to my
-            attention
-
-        Args:
-            rounding: A function that takes the current minor unit as an integer
-            and returns the newly rounded minor unit amount
-
-        Returns:
-            A Money instance containing the rounded amount with the same currency
-
-        Examples:
-            >>> # Canadian cash rounding (nearest 5 cents)
-            >>> def cad_round_cash(amount: int) -> int:
-            ...     return int(round(amount / 5.0) * 5)
-            ...
-            >>> total = Money.from_major("12.03", "USD")
-            >>> cash = total.cash(cand_round_cash)
-            >>> print(cash)
-        """
-        amount = rounding(self._amount)
-        return Money(amount, self._currency)
-
     def __hash__(self) -> int:
         return hash((self._amount, self._currency))
 
@@ -562,7 +606,7 @@ class Money(MonetaryAmount):
         fmt = "{sign}{currency}\xa0{number}"
         sign = "-" if self._amount < 0 else ""
         return fmt.format(
-            sign=sign, currency=self.currency.ccy_code, number=abs(self.to_decimal())
+            sign=sign, currency=self.currency.ccy_code, number=abs(self.as_majors)
         )
 
     def __format__(self, format_spec: str) -> str:

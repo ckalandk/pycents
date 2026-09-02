@@ -79,7 +79,7 @@ class MoneyFormatter:
             )
 
         str_money = self.backend_formatter.format(
-            money.to_decimal(),
+            money.as_majors,
             money.currency,
             spec,
         )

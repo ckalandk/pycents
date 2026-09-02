@@ -75,10 +75,10 @@ def test_allocate_base_preserves_remainder():
 
     assert len(shares) == 3
     assert all(isinstance(s, Money) for s in shares)
-    assert [s.minor_units for s in shares] == [33, 33, 33]
+    assert [s.as_minors for s in shares] == [33, 33, 33]
 
     assert isinstance(remainder, Money)
-    assert remainder.minor_units == 1
+    assert remainder.as_minors == 1
     assert remainder._currency.ccy_code == "USD"
 
 
@@ -87,14 +87,14 @@ def test_allocate_integration_default_strategy():
     result = allocate(money, [3, 4, 4])
 
     assert all(isinstance(s, Money) for s in result)
-    assert [s.minor_units for s in result] == [27, 37, 36]
+    assert [s.as_minors for s in result] == [27, 37, 36]
 
 
 def test_allocate_integration_explicit_strategy():
     money = Money.from_major(1, "USD")
     result = allocate(money, [3, 4, 4], strategy=round_robin)
 
-    assert [s.minor_units for s in result] == [28, 36, 36]
+    assert [s.as_minors for s in result] == [28, 36, 36]
 
 
 def test_allocation_validations_trigger_correctly():
