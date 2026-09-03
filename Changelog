@@ -7,18 +7,27 @@ and custom currencies.
 
 ### Features
 
+#### Custom  Currencies
+
 * Added the `Xcy` enum-like class for cryptocurrencies and custom currencies.
 * Added pre-registered definitions for popular cryptocurrencies.
 * Added custom currency registration through `Xcy.register`.
 * Integrated custom currencies seamlessly with the locale-aware formatting engine.
 
-### Docs
+#### Money API
 
-* Improve the documentation & and add section on custom currencies usage.
+* Added ``as_majors`` and ``as_minors`` properties as the preferred API for accessing major and minor unit amounts. The existing ``to_decimal()`` and ``minor_units`` APIs are deprecated.
 
-### Misc
-
+* Updated ``Money.from_major`` to require an explicit rounding mode when rounding is necessary.
 * Add factory method `from_minor` to construct `Money` instance from minor units.
+* Promoted ``UnroundedMoney`` to a public API type for representing intermediate, high-precision monetary calculations.
+* Added ``UnroundedMoney.from_major()`` for constructing unrounded amounts from major currency units. The existing ``UnroundedMoney.from_decimal()`` API is deprecated.
+* Added ``as_majors()`` property to ``UnroundedMoney`` to access the stored monetary amount
+  in major units
+
+#### Documentation
+
+* Improved the documentation and added a guide for using custom currencies.
 
 ## Version 1.1.0
 

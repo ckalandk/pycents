@@ -230,7 +230,7 @@ is to delete it an register it again under different name.
 
     >>> Xcy.register(
     ...     code="BTC",
-    ...     name="Genuine bitcoin",
+    ...     name="подлинный биткоин",
     ...     minor_units=8,
     ...     symbol="₿",
     ... )
@@ -238,7 +238,19 @@ is to delete it an register it again under different name.
 Money
 =====
 
-``Money`` is the central class of **PyCents**.
+``Money`` is the central class of **PyCents**. A ``Money`` instance is always
+associated with a specific currency and stores its amount internally as an
+integer number of minor units. For example, $12.50 is represented as 1250 minor units of USD.
+
+**Money instance represents amounts that can be expressed exactly using the currency's
+standard minor unit.** This a fundamental invariant of the ``Money`` class and is maintained
+throughout the Money API. For example, USD has a minor unit of two decimal places,
+so ``Money`` can represent $12.34 but not $12.345!
+
+For higher precision calculations, ``Money`` provides a companion class called ``UnroundedMoney``.
+This class is used to represent amounts that cannot be expressed exactly using the currency's
+standard minor unit. For example, multiplying $12.34 by 1.5 yields $18.525, which cannot be represented
+exactly using USD's two decimal places. In this case, the result is an ``UnroundedMoney`` instance.
 
 Immutability
 ------------
@@ -287,7 +299,7 @@ string in addition to a ``Ccy`` or ``Xcy`` instance.
 .. code-block:: python
 
     from pycents import Money, Currency, Ccy
-    >>> price = Money.from_minor(1999, Currency(Ccy.USD))
+    >>> price = Money.from_minor(1999, Ccy.USD)
     >>> print(price)
     USD 19.99
     >>> price = Money.from_minor(1999, "BTC")
@@ -319,11 +331,8 @@ number of decimal places.
 
 The class method ``from_major`` accepts an optional third keyword argument that
 specifies the rounding mode to apply when the monetary amount has more fractional digits
-than the currency supports. If omitted, the rounding policy defaults to **round half even**.
-
-The version of ``from_major`` that performs rounding should only be used when
-the monetary amount originates from an external source, and must be converted
-to valid Monetary amount immediatly.
+than the currency supports. If omitted, an exception is raised when the amount cannot
+be represented exactly in minor units.
 
 The Rounding Policies are provided through the enum ``RoundingMode``
 from the ``pycents.rounding`` package. See :doc:`/guide/rounding`.
@@ -334,8 +343,8 @@ from the ``pycents.rounding`` package. See :doc:`/guide/rounding`.
     >>> from pycents.rounding import RoundingMode
 
     >>> price = Money.from_major("150.756", "USD")
-    >>> print(price)
-    USD 150.76
+    ...
+    ValueError: Cannot represent 150.756 USD in minor units...
     >>> price = Money.from_major("150.754", "USD", rounding=RoundingMode.DOWN)
     >>> print(price)
     USD 150.75
@@ -362,6 +371,74 @@ the classmethod `zero` to enable caching
     # Using Money Constructor bypasses the cache
     zero3 = Money(0, Currency.from_code("USD"))
     assert zero3 is not zero1
+
+Creating UnroundedMoney
+-----------------------
+
+In most cases, you do not need to construct an ``UnroundedMoney`` instance
+directly. It is produced automatically when an arithmetic operation on
+Money results in an amount with more fractional digits than the
+currency's standard minor unit.
+
+For example, multiplying $12.35 by 1.5 produces $18.512.
+The result is represented as an ``UnroundedMoney`` because the intermediate
+result is not required to satisfy the two-decimal-place invariant of USD.
+
+.. code-block:: python
+
+    >>> from decimal import Decimal
+    >>> from pycents import Money, UnroundedMoney
+
+    >>> price = Money.from_major("12.35", "USD")
+    >>> result = price * Decimal("1.5")
+
+    >>> isinstance(result, UnroundedMoney)
+    True
+    >>> result.as_majors
+    Decimal('18.512')
+
+An ``UnroundedMoney`` retains the full precision of the calculation and does
+not perform implicit rounding. When the calculation is complete, use
+``round()`` to convert it back to a Money instance:
+
+.. code-block:: python
+
+    >>> total = result.round()
+    >>> isinstance(total, Money)
+    True
+    >>> total.as_majors
+    Decimal('18.51')
+
+Constructing UnroundedMoney directly
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You can construct an UnroundedMoney directly when you already have a
+high-precision amount expressed in major currency units. Use
+``  UnroundedMoney.from_major() for this purpose.
+
+.. code-block:: python
+
+    >>> price = UnroundedMoney.from_major("12.345", "USD")
+    >>> price.as_majors
+    Decimal('12.345')
+
+Unlike ``Money.from_major()``, ``UnroundedMoney.from_major()`` does not require
+the amount to conform to the currency's standard minor unit and does not
+perform rounding.
+
+The resulting value remains an ``UnroundedMoney`` until it is explicitly
+rounded:
+
+.. code-block:: python
+
+    >>> price.round()
+    Money(1235, 'USD')
+    >>> price.round().as_majors
+    Decimal('12.35')
+    >>> price.round(rounding=RoundingMode.DOWN).as_majors
+    Decimal('12.34')
+
+As the example above shows, you can specify a rounding mode when calling ``round()``.
 
 Arithmetic
 ----------
@@ -395,11 +472,11 @@ List of all the Minor-Unit operations
   .. code-block:: python
 
       >>> salary = Money.from_major(2500, "USD")
-      >>> bonus = Money.from_major(50.55, "USD")
+      >>> bonus = Money.from_major("50.55", "USD")
       >>> total = salary + bonus
       >>> assert type(total) is Money
 
-      >>> price = Money.from_major(12.99, "USD")
+      >>> price = Money.from_major("12.99", "USD")
       >>> discount = Money.from_major(2, "USD")
       >>> final_price = price - discount
       >>> assert type(final_price) is Money
@@ -475,22 +552,36 @@ Arithmetic operations work according to this rules
     Money / Money = Decimal
     Unrounded * factor = Unrounded
 
-Converting an `UnroundedMoney` instance to `Money` via the `round` method,
-must be performed at the very end of the arithmetic pipeline.
+PyCents does not impose when rounding should occur, the appropriate rounding
+points are determined by the application's business.
+
+When no intermediate rounding is required, postponing ``round()`` until the end
+of the calculation preserves the maximum available precision. However, this is
+not always desirable. For example, cryptocurrency and blockchain systems
+typically perform monetary arithmetic using integers representing the smallest
+unit of a currency, such as wei for Ethereum. Any fractional smallest units
+produced by an intermediate operation cannot be represented and are therefore
+discarded.
+
+To emulate such integer-based cryptocurrency arithmetic with **PyCents**,
+``round()`` with an appropriate rounding mode, must be explicitly applied at every intermediate steps that
+might produce and ``Unrounded`` results. For example, an
+18-decimal WAD calculation that truncates after every operation can be
+simulated by calling ``round(RoundingMode.DOWN)`` after each operation.
 
 Decimal precision and implicit rounding
 ---------------------------------------
 
 ``PyCents`` does not perform implicit rounding at the library level.
-However, arithmetic involving ``UnroundedMoney``, which uses Python's Decimal internally,
+However, arithmetic involving ``UnroundedMoney``, which uses Python's ``Decimal`` internally,
 is still subject to the active decimal context.
-In particular, the context's precision can cause Decimal operations
+In particular, the context's precision can cause ``Decimal`` operations
 to round their results implicitly.
 
 This is especially important when working with currencies that have a
 large number of decimal places, such as cryptocurrencies whose smallest
 units may correspond to 18 or more decimal places.
-In such cases, the default Decimal precision can be exhausted much more
+In such cases, the default ``Decimal`` precision can be exhausted much more
 easily than it would be with conventional fiat currencies.
 
 A typical example is when the result of an operation yield an amount
@@ -503,16 +594,14 @@ with infinite decimals. Consider the following case:
     mny = Money(10, Currency.from_code("USD"))
     unr = mny / Decimal(3)
 
-The exact decimal expansion of ``10 / 3`` is infinite. Because Decimal arithmetic
+The exact decimal expansion of ``10 / 3`` is infinite. Because ``Decimal`` arithmetic
 is performed under a finite precision context, the result must be rounded
-according to the active context. This rounding happens inside Decimal
+according to the active context. This rounding happens inside ``Decimal``
 itself and is therefore invisible to ``pycents``.
 
-Some operations produce results whose exact decimal representation is infinite.
-Such results cannot be represented exactly by a finite-precision Decimal,
-so Python must round them according to the active decimal context.
 The only thing you can do in this situation is controlling
-the rounding mode used by Python:
+the rounding mode used by Python or increasing the precision of the active Decimal context, if yo
+think that the final result could be affected by the new precision.
 
 .. code-block:: python
 
@@ -539,7 +628,7 @@ For example:
 .. code-block:: python
 
     from decimal import getcontext
-    from pycents import Money, RoundingMode
+    from pycents import Money
 
     # Increase the precision of the current Decimal context
     getcontext().prec = 80
@@ -562,7 +651,7 @@ Detecting implicit rounding
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You can configure the Decimal context to raise an exception
-whenever an operation would require rounding under the active Decimal context.:
+whenever an operation would require rounding under the active Decimal context:
 
 .. code-block:: python
 
@@ -584,14 +673,11 @@ to decide how the operations should be handled.
 You can then either:
 
 * **Choose an explicit rounding policy** when the operation yields
-  result with infinitely many decimals.
+  result with infinitely many decimals. Alternatively, you can increase the Decimal precision
+  if you think that the final result could be affected by the new precision.
 
 * **Increase the Decimal precision** when the operation is finite but
   requires more digits than the default ``Decimal`` context precision.
-
-.. note::
-
-    This behavior might change in the near future
 
 Avoid Floating-Point Numbers
 ----------------------------

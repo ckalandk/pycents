@@ -43,13 +43,23 @@ Create money from minor units (The currency smallest unit e.g cents):
 
 .. code-block:: python
 
-    from pycents import Money, Currency
+    >>> from pycents import Money, Currency
 
-    wallet = Money(1250, Currency.from_code("USD"))
-
-    bitcoins = Money(2000000, Currency.from_code("BTC"))
+    >>> wallet = Money(1250, Currency.from_code("USD"))
+    >>> wallet.as_minors
+    1250
+    >>> wallet.as_majors
+    Decimal('12.50')
+    >>> bitcoins = Money(259, Currency.from_code("BTC"))
+    >>> bitcoins.as_minors
+    259
 
 `wallet` represents a value of 1250 cents in USD.
+
+.. note::
+    A `Money` amount is stored internally as an integer number of minor
+    currency units. Use `as_majors` and `as_minors` when you need to
+    access the amount explicitly in either unit.
 
 Or from major units:
 
@@ -58,6 +68,8 @@ Or from major units:
     >>> from decimal import Decimal
 
     >>> salary = Money.from_major(Decimal("3500.75"), "USD")
+    >>> salary.as_majors
+    Decimal('3500.75')
     >>> salary = Money.from_major("3500.75", "USD")
     >>> print(salary)
     USD 3500.75
@@ -65,20 +77,20 @@ Or from major units:
     >>> print(salary)
     EUR 2000
 
-If the Decimal amount has more fractional digits then the currency supports,
-the amount will be rounded to accomodate for the currency's minor unit.
-By default `from_major` use half-even rounding mode.
-The following example uses "USD" which supports up to 2 decimals.
+If the amount has more fractional digits than the currency supports,
+an explicit rounding mode must be provided.
 
 .. code-block:: python
 
-    >>> from pycents import Money
-    >>> from pycents.rounding import RoundingMode
+    >>> from pycents import Money, RoundingMode
 
-    >>> final_price = Money.from_major(19.175, "USD")
+    >>> final_price = Money.from_major("19.175", "USD")
+    ...
+    ValueError: Amount 19.175 has more fractional digits than the USD minor units: 2.
+    Specify a rounding mode to convert it to a valid monetary amount.
+
+    >>> final_price = Money.from_major("19.175", "USD", rounding=RoundingMode.DOWN)
     >>> print(final_price)
-    USD 19.18
-    >>> final_price = Money.from_major(19.175, "USD", rounding=RoundingMode.DOWN)
     USD 19.17
 
 .. note::
@@ -102,7 +114,7 @@ use ``UnroundedMoney``.
     from pycents import Money, UnroundedMoney
     price_per_million_api_call = Money.from_major(1.67, "USD") # 167 cents
     price_per_api_call = price_per_million_api_call / 1_000_000
-    assert isintance(price_per_api_call, UnroundedMoney)
+    assert isinstance(price_per_api_call, UnroundedMoney)
     print(price_per_api_call)
     # [Output] USD 0.0000167
 
@@ -121,8 +133,8 @@ Think of it this way:
 
     You rarely need to instantiate ``UnroundedMoney`` directly. As shown above,
     standard ``Money`` objects automatically convert to ``UnroundedMoney`` when
-    multiplyed/divided by Decimals. But if you ever need to construct
-    an ``UnroundedMoney`` instance directly, use ``from_decimal`` method.
+    multiplied/divided by Decimals. But if you ever need to construct
+    an ``UnroundedMoney`` instance directly, use ``from_major`` method.
     See the example below:
 
 .. code-block:: python
@@ -130,7 +142,7 @@ Think of it this way:
     from decimal import Decimal
     from pycents import Money, UnroundedMoney, RoundingMode
 
-    gas_price_per_gallon = UnroundedMoney.from_decimal(Decimal("4.0656"), "USD")
+    gas_price_per_gallon = UnroundedMoney.from_major(Decimal("4.0656"), "USD")
     volume = Decimal("12.345") # gallons
     subtotal = gas_price_per_gallon * volume # USD 50.189832
     # At this stage subtotal is still an `UnroundedMoney` instance
@@ -189,7 +201,7 @@ Multiplying a ``Money`` instance by an integer produces another ``Money`` object
     >>> print(total)
      USD 399.80
 
-If the factor of the multiplication is a Decimal, the result
+If the factor of the multiplication is a ``Decimal``, the result
 of the operation will be an instance of ``UnroundedMoney``.
 
 .. code-block:: python
@@ -213,7 +225,7 @@ you may use another rounding policy available through the enum ``RoundingMode``:
     >>> from pycents import Money, RoundingMode
     >>> cost_per_month = Money.from_major("26.99", "USD")
 
-    >>> days_used = Decimal('17')
+    >>> days_used = 17
     >>> prorated_cost = (cost_per_month * days_used) / Decimal('30')
     >>> print(prorated_cost)
     USD 15.29433333333333333333333333
@@ -266,7 +278,7 @@ Locale-aware formatting is also available through optional formatting backends.
 
 .. code-block:: python
 
-    >>> price = Money.from_major(2.99, "USD")
+    >>> price = Money.from_major("2.99", "USD")
     >>> print(f"{price}")
     USD 2.99
     >>> print(f"{price:h}")  # Hide the currency
@@ -356,8 +368,7 @@ the locale to use, see the following example on how to explicitly choose a local
 
 .. caution::
 
-    Locale configuration should be done after backend selection
-    via ``formatting.use_backend`` function.
+    Locale configuration should be done after backend selection.
 
 Next steps
 ==========
