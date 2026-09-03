@@ -644,6 +644,9 @@ wheels = [
 name = "pycents"
 version = "1.1.0"
 source = { editable = "." }
+dependencies = [
+    { name = "typing-extensions" },
+]
 
 [package.optional-dependencies]
 babel = [
@@ -679,6 +682,7 @@ requires-dist = [
     { name = "babel", marker = "extra == 'i18n'" },
     { name = "pyicu", marker = "sys_platform != 'win32' and extra == 'pyicu'", specifier = ">=2.16.2" },
     { name = "pyicu", marker = "extra == 'i18n'" },
+    { name = "typing-extensions", specifier = ">=4.16.0" },
 ]
 provides-extras = ["babel", "pyicu", "i18n"]
 
