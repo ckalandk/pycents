@@ -252,22 +252,6 @@ This class is used to represent amounts that cannot be expressed exactly using t
 standard minor unit. For example, multiplying $12.34 by 1.5 yields $18.525, which cannot be represented
 exactly using USD's two decimal places. In this case, the result is an ``UnroundedMoney`` instance.
 
-Immutability
-------------
-
-``Money`` objects are immutable.
-
-Every arithmetic operation returns a new instance.
-
-.. code-block:: python
-
-    >>> wallet = Money.from_major("10.00", "USD")
-    >>> id1 = id(wallet)
-    >>> wallet += Money.from_major("5.00", "USD")
-    >>> id2 = id(wallet)
-    >>> assert id1 != id2
-
-
 Creating money
 --------------
 
@@ -345,6 +329,7 @@ from the ``pycents.rounding`` package. See :doc:`/guide/rounding`.
     >>> price = Money.from_major("150.756", "USD")
     ...
     ValueError: Cannot represent 150.756 USD in minor units...
+
     >>> price = Money.from_major("150.754", "USD", rounding=RoundingMode.DOWN)
     >>> print(price)
     USD 150.75
@@ -439,6 +424,10 @@ rounded:
     Decimal('12.34')
 
 As the example above shows, you can specify a rounding mode when calling ``round()``.
+
+.. note::
+    You can also explicitly convert standard ``Money`` to ``UnroundedMoney``
+    by passing it directly to the constructor: ``UnroundedMoney(my_money)``
 
 Arithmetic
 ----------
@@ -797,25 +786,102 @@ Attempting to compare different currencies raises ``MismatchCurrencyError``.
 
 .. warning::
 
-    You cannot directly compare `Money` and `UnroudedMoney` objects, doing
-    so will raise a `TypeError` exception. You need to convert the Unrounded object
-    to `Money` instance before trying to compare them.
+    You cannot directly compare ``Money`` and ``UnroundedMoney`` objects, doing
+    so will raise a ``TypeError`` exception. You need to convert the Unrounded object
+    to a ``Money`` instance before trying to compare them.
 
+Miscellaneous
+--------------
+
+Serialization
+^^^^^^^^^^^^^
+
+When interacting with APIs, databases, or JSON payloads, you often need to
+serialize and deserialize money objects. ``pycents`` provides ``as_dict()``
+and ``from_dict()`` for this exact purpose.
+
+.. code-block:: python
+
+    >>> price = Money.from_major("199.99", "USD")
+    >>> data = price.as_dict()
+    >>> print(data)
+    {'amount': 19999, 'currency': 'USD'}
+
+    >>> restored = Money.from_dict(data)
+    >>> assert price == restored
+
+Boolean Evaluation
+^^^^^^^^^^^^^^^^^^
+
+``Money`` and ``UnroundedMoney`` instances evaluate to ``False`` if their amount is zero,
+and ``True`` otherwise.
+
+.. code-block:: python
+
+    >>> wallet = Money.zero("USD")
+    >>> if not wallet:
+    ...     print("Wallet is empty!")
+    Wallet is empty!
+
+Hashability
+^^^^^^^^^^^
+
+Both ``Money`` and ``UnroundedMoney`` are immutable and fully hashable.
+Their hash is computed based on their amount and currency.
+
+.. code-block:: python
+
+    >>> price_1 = Money.from_major("10.00", "USD")
+    >>> price_2 = Money.from_major("15.00", "USD")
+    >>> price_3 = Money.from_major("10.00", "USD")
+
+    >>> unique_prices = {price_1, price_2, price_3}
+    >>> len(unique_prices)
+    2
 
 Design guarantees
 -----------------
 
-PyCents provides the following guarantees:
+Data Integrity & Representation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* ``Money``, ``UnroundedMoney`` objects are immutable.
-* Addition and subtraction are mathematically correct; (Money, +) is
-  a commutative group.
-* Sub-Unit arithmetic operations (multiplication and division by non-integer
-  factors) preserve the standard algebraic identities, such as:
+* **Strict Minor-Unit Invariant:** A ``Money`` object is guaranteed to hold an amount
+  that can be expressed *exactly* in the currency's minor units. It is impossible
+  for a ``Money`` instance to hide fractional minor units.
+* **Zero Floating-Point Tolerance:** pycents strictly forbids the use of Python's
+  float type both internally and at the API boundary.
+  All amounts are backed by exact numeric types (int and Decimal),
+* **Immutability and Thread-Safety:** Both ``Money`` and ``UnroundedMoney`` are strictly
+  immutable. Modifying an amount always returns a new instance, making ``pycents``
+  inherently thread-safe and safe to share across asynchronous boundaries or cache.
+
+Mathematical Correctness
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+* **Algebraic Consistency:** Addition and subtraction are mathematically exact;
+  the set of ``Money`` values forms a commutative group under addition ``(Money, +)``.
+* **Identity Preservation:** Sub-Unit arithmetic operations (multiplication and
+  division) preserve standard algebraic identities, such as:
 
   - ``(money * a) * b == money * (a * b)``
   - ``((money / a) * a).round() == money``
 
-  provided the operands remain within the practical precision limits of
-  Python's ``Decimal`` arithmetic.
-* Monetary values are represented internally using integer minor units.
+  *Provided the operands remain within the practical precision limits of Python's
+  active ``Decimal`` context.*
+* **No Implicit Intermediate Rounding:** Sub-unit operations immediately yield an
+  ``UnroundedMoney`` instance. Precision is retained indefinitely until the developer
+  makes an explicit decision to call ``.round()``.
+
+Runtime & Type Safety (Fail-Fast)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* **Strict Currency Isolation:** Adding, subtracting,
+  or comparing amounts of different currencies is prohibited.
+  Any such attempt immediately raises a ``CurrencyMismatchError``.
+* **Protection against precision loss:** Attempting to create a ``Money`` instance
+  from a high-precision decimal (e.g., ``Money.from_major("10.125", "USD")``) without
+  explicitly providing a ``RoundingMode`` will raise a ``ValueError`` rather than
+  silently guessing the rounding strategy.
+* **Static Type Enforcement:** The API heavily leverages Python's type hinting to
+  reject unsafe types (like ``float``) at the static analysis level, ensuring tools
+  like ``mypy`` or ``pyright`` catch errors before runtime.
