@@ -1,9 +1,8 @@
-import hashlib
-import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from download_xml import download_xml
+from utils import _compute_hash, _get_stored_hash
 
 _LIST_ONE_XML_TAGS = {
     "Ccy": "alphabetic_code",
@@ -11,24 +10,6 @@ _LIST_ONE_XML_TAGS = {
     "CcyMnrUnts": "minor_unit",
     "CcyNbr": "numeric_code",
 }
-
-
-def _compute_hash(path: Path):
-    sh256 = hashlib.sha256()
-    with open(path, "rb") as f:
-        while chunk := f.read(1 << 13):
-            sh256.update(chunk)
-
-    return sh256.hexdigest()
-
-
-def _get_stored_hash(path: Path):
-    if not path.exists():
-        return None
-    text = path.read_text()
-
-    match = re.search(r'_xml_hash\s*=\s*"([^"]+)"', text)
-    return match.group(1) if match else None
 
 
 def _get_element_text(element: ET.Element[str], target: str) -> str | int:
@@ -47,7 +28,7 @@ current_dir = Path(__file__).parent
 root_dir = current_dir.parent
 
 XML_PATH = current_dir / "list-one.xml"
-OUTPUT_PATH = root_dir / "src/isomoney/iso4217.py"
+OUTPUT_PATH = root_dir / "src/pycents/iso4217.py"
 
 
 class EnumGen:
@@ -65,6 +46,7 @@ class EnumGen:
 
     def generate(self):
         if self.current_hash == self.last_hash:
+            print("No changes detected in the XML data.")
             return
         tree = ET.parse(self.xml_path)
         root = tree.getroot()

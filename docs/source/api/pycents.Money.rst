@@ -31,5 +31,7 @@
 
    .. autosummary::
 
+      ~Money.as_majors
+      ~Money.as_minors
       ~Money.currency
       ~Money.minor_units

@@ -1,5 +1,14 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+## [Unreleased]
+
+### Added
+
+- `Currency.from_country(country_code)` classmethod to map ISO 3166-1 country codes
+  to their primary ISO 4217 currencies.
+
 ## Version 1.2.0
 
 I am happy to announce that **PyCents** added supports for crypto
@@ -9,32 +18,38 @@ and custom currencies.
 
 #### Custom  Currencies
 
-* Added the `Xcy` enum-like class for cryptocurrencies and custom currencies.
-* Added pre-registered definitions for popular cryptocurrencies.
-* Added custom currency registration through `Xcy.register`.
-* Integrated custom currencies seamlessly with the locale-aware formatting engine.
+- Added the `Xcy` enum-like class for cryptocurrencies and custom currencies.
+- Added pre-registered definitions for popular cryptocurrencies.
+- Added custom currency registration through `Xcy.register`.
+- Integrated custom currencies seamlessly with the locale-aware formatting engine.
 
 #### Money API
 
-* Added ``as_majors`` and ``as_minors`` properties as the preferred API for accessing major and minor unit amounts. The existing ``to_decimal()`` and ``minor_units`` APIs are deprecated.
+- Added ``as_majors`` and ``as_minors`` properties as the preferred API for accessing
+  major and minor unit amounts. The existing ``to_decimal()`` and ``minor_units``
+  APIs are deprecated.
 
-* Updated ``Money.from_major`` to require an explicit rounding mode when rounding is necessary.
-* Add factory method `from_minor` to construct `Money` instance from minor units.
-* Promoted ``UnroundedMoney`` to a public API type for representing intermediate, high-precision monetary calculations.
-* Added ``UnroundedMoney.from_major()`` for constructing unrounded amounts from major currency units. The existing ``UnroundedMoney.from_decimal()`` API is deprecated.
-* Added ``as_majors()`` property to ``UnroundedMoney`` to access the stored monetary amount
-  in major units
+- Updated ``Money.from_major`` to require an explicit rounding mode when rounding
+  is necessary.
+- Add factory method `from_minor` to construct `Money` instance from minor units.
+- Promoted ``UnroundedMoney`` to a public API type for representing intermediate,
+  high-precision   monetary calculations.
+- Added ``UnroundedMoney.from_major()`` for constructing unrounded amounts from
+  major currency units. The existing ``UnroundedMoney.from_decimal()`` API is deprecated.
+- Added ``as_majors()`` property to ``UnroundedMoney`` to access the stored
+  monetary amount in major units
 
 #### Documentation
 
-* Improved the documentation and added a guide for using custom currencies.
+- Improved the documentation and added a guide for using custom currencies.
 
 ## Version 1.1.0
 
 ### Features
 
-* Added cash method to the Money class to support physical cash transactions.
+- Added cash method to the Money class to support physical cash transactions.
 
 ## Version 1.0.0
 
-Initial stable production release. pycents public API is frozen and fully covered by tests.
+Initial stable production release. pycents public API is frozen and fully
+covered by tests.

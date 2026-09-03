@@ -15,6 +15,7 @@
 
       ~UnroundedMoney.__init__
       ~UnroundedMoney.from_decimal
+      ~UnroundedMoney.from_major
       ~UnroundedMoney.round
       ~UnroundedMoney.to_decimal
 
@@ -26,4 +27,5 @@
 
    .. autosummary::
 
+      ~UnroundedMoney.as_majors
       ~UnroundedMoney.currency

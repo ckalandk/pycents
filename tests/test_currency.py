@@ -76,3 +76,20 @@ def test_get_xcy_def_reject_ccy_args():
     test = Currency(Ccy.USD)
     with pytest.raises(ValueError, match="Cannot get Xcy definition"):
         _ = test._get_xcy_def()
+
+
+def test_currency_from_country():
+    usd = Currency.from_country("US")
+    assert astuple(usd) == Ccy.USD.value
+
+    eur = Currency.from_country("FR")
+    assert astuple(eur) == Ccy.EUR.value
+
+    jpy = Currency.from_country("JP")
+    assert astuple(jpy) == Ccy.JPY.value
+
+
+def test_currency_from_country_invalid():
+    with pytest.raises(InvalidCurrencyError) as exc_info:
+        Currency.from_country("XX")
+    assert str(exc_info.value) == "No primary currency found for country code 'XX'."

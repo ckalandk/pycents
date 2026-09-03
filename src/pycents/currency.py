@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import InitVar, dataclass, field
 from typing import ClassVar
 
+from pycents.data import CNTRY_TO_PRIMARY_CCY
+
 from .exceptions import InvalidCurrencyError
 from .iso4217 import Ccy
 from .xcy import Xcy
@@ -98,6 +100,44 @@ class Currency:
             curr = ccy
 
         return cls(curr)
+
+    @classmethod
+    def from_country(cls, country_code: str) -> Currency:
+        """
+        Construct a Currency instance from a country code.
+
+        Parameters
+        ----------
+        country_code : str
+            An ISO 3166-1 alpha-2 country code (e.g. ``"US"``, ``"FR"``).
+
+        Returns
+        -------
+        Currency
+            The corresponding country's primary Currency instance.
+
+        Raises
+        ------
+        ValueError
+            If the supplied string is not a valid country code or if the country
+            does not have an associated primary currency.
+
+        Examples
+        --------
+        >>> Currency.from_country("US")
+        Currency(ccy_code='USD')
+        >>> Currency.from_country("FR")
+        Currency(ccy_code='EUR')
+        """
+        country_code_upper = country_code.upper()
+        ccy_code = CNTRY_TO_PRIMARY_CCY.get(country_code_upper)
+
+        if ccy_code is None:
+            raise InvalidCurrencyError(
+                f"No primary currency found for country code '{country_code}'."
+            )
+
+        return cls.from_code(ccy_code)
 
     def _is_iso(self) -> bool:
         return self.ccy_num_code < 1000
