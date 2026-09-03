@@ -23,7 +23,7 @@ repos:
         args: [ --fix ]
 
       - id: ruff-format
-        types_or: [python, pyi, jupyter, markdown]
+        types_or: [python]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v2.3.0

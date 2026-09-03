@@ -1,5 +1,5 @@
 <div align="center">
-<img src="./assets/logo-light.svg" alt="pycents logo"/>
+<img src="https://raw.githubusercontent.com/ckalandk/pycents/main/assets/logo-light.svg" alt="pycents logo"/>
 <br/>
 <br/>
 
