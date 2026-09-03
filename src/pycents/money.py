@@ -4,7 +4,8 @@ from collections.abc import Callable, Iterable
 from decimal import Decimal
 from functools import total_ordering
 from typing import Any, Self, final, overload
-from warnings import deprecated
+
+from typing_extensions import deprecated
 
 from pycents.formatting import format as money_format
 
