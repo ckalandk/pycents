@@ -150,7 +150,9 @@ class UnroundedMoney(MonetaryAmount):
         Returns:
             A ``Money`` instance containing the quantized result in minor units.
         """
-        # TODO Maybe avoid rounding if self.amount is an integer? profile
+        if self._amount == self._amount.to_integral_value():
+            return Money(int(self._amount), self._currency)
+
         rounded = self._amount.quantize(
             Decimal("1"), rounding=as_decimal_rounding(rounding)
         )
