@@ -173,3 +173,12 @@ Once the block exits, the original global settings are seamlessly restored.
 
         print(price)             # Outputs: USD 1250.00
         print(f"Total: {price}") # Output: Total: 1,5 Mio. $
+
+Final note
+-----------
+
+**PyCents** provides complete implementations for babel and pyicu.
+If you need to integrate a proprietary formatting engine, you can write a custom backend
+by subclassing the ``pycents.formatting.BaseFormatter`` abstract base class.
+We recommend using ``std_formatter.py`` as a reference implementation for creating
+a custom backend.
