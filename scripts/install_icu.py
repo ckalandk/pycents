@@ -36,8 +36,7 @@ with tempfile.TemporaryDirectory() as tmp:
     urlretrieve(url, wheel)
     subprocess.run(
         [
-            sys.executable,
-            "-m",
+            "uv",
             "pip",
             "install",
             str(wheel),

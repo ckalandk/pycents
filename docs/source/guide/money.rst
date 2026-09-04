@@ -78,6 +78,24 @@ When convenient construction from a currency code is desired, use
     Currency.from_code("EUR")
     Currency.from_code("BTC")
 
+Another convenient way to construct a ``Currency`` instance is to use
+standard two-letter ISO 3166-1 country code. This method will automatically resolve the country
+to its primary active national currency.
+
+.. code-block:: python
+
+    >>> Currency.from_country("US")
+    Currency(ccy_code='USD')
+    >>> Currency.from_country("JP")
+    Currency(ccy_code='JPY')
+    >>> Currency.from_country("FR")
+    Currency(ccy_code='EUR')
+    >>> Currency.from_country("ZZ")
+    Traceback (most recent call last):
+    ...
+    InvalidCurrencyError: No primary currency found for country code 'ZZ'.
+
+
 Currency information
 --------------------
 
