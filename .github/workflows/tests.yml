@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ "**" ]
     paths-ignore: &ignored_paths
       - "docs/**"
       - "examples/**"
