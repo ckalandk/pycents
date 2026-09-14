@@ -7,6 +7,7 @@ from typing import Any, Self, final, overload
 
 from typing_extensions import deprecated
 
+from pycents.conversion import DefaultProvider, ExchangeRate, ExchangeRateProvider
 from pycents.formatting import format as money_format
 
 from ._decimal import _decimal_places, _force_decimal, _trim_trailing_zeros
@@ -150,7 +151,9 @@ class UnroundedMoney(MonetaryAmount):
         Returns:
             A ``Money`` instance containing the quantized result in minor units.
         """
-        # TODO Maybe avoid rounding if self.amount is an integer? profile
+        if self._amount == self._amount.to_integral_value():
+            return Money(int(self._amount), self._currency)
+
         rounded = self._amount.quantize(
             Decimal("1"), rounding=as_decimal_rounding(rounding)
         )
@@ -531,12 +534,32 @@ class Money(MonetaryAmount):
     def __mul__(self, factor: int) -> Money: ...
 
     @overload
-    def __mul__(self, factor: Decimal) -> UnroundedMoney: ...
+    def __mul__(self, factor: Decimal | ExchangeRate) -> UnroundedMoney: ...
 
-    def __mul__(self, factor: int | Decimal) -> MonetaryAmount:
-        if type(factor) is int:
+    def __mul__(self, factor: int | Decimal | ExchangeRate) -> MonetaryAmount:
+        if isinstance(factor, int):
             return Money(self._amount * factor, self._currency)
+        elif isinstance(factor, ExchangeRate):
+            return self._convert(factor)
         return UnroundedMoney(self) * factor
+
+    def _convert(self, rate: ExchangeRate) -> UnroundedMoney:
+        if self.currency != rate.base:
+            raise CurrencyMismatchError(
+                f"cannot convert {self.currency.ccy_code} using "
+                f"{rate.base.ccy_code}/{rate.quote.ccy_code} exchange rate"
+            )
+        result = self.as_majors * rate.rate
+        return UnroundedMoney.from_major(result, rate.quote.ccy_code)
+
+    def convert_to(
+        self, currency: str, provider: ExchangeRateProvider | None = None
+    ) -> UnroundedMoney:
+        target = Currency.from_code(currency.upper())
+        if provider is None:
+            provider = DefaultProvider("ECB")
+        rate = provider.get_rate(self.currency, target)
+        return self * rate
 
     def __rmul__(self, factor: int | Decimal) -> MonetaryAmount:
         return self * factor

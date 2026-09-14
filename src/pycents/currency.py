@@ -139,6 +139,9 @@ class Currency:
 
         return cls.from_code(ccy_code)
 
+    def __str__(self) -> str:
+        return self.ccy_code
+
     def _is_iso(self) -> bool:
         return self.ccy_num_code < 1000
 

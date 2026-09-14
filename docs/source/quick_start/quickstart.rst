@@ -370,6 +370,37 @@ the locale to use, see the following example on how to explicitly choose a local
 
     Locale configuration should be done after backend selection.
 
+Conversion
+==========
+
+I know the rate just tell me how to convert:
+--------------------------------------------
+
+.. code-block:: python
+
+    from pycents import UnroundedMoney, Money, Currency
+    from pycents.conversion import ExchangeRate
+
+    eur_usd = ExchangeRate.from_pair("EUR/USD", "1.1616")
+    source = Money.from_major("2.99", "EUR")
+    converted = source * eur_usd
+
+    assert isinstance(converted, UnroundedMoney)
+    print(converted.round())
+
+Using a provider
+----------------
+
+A provider is ....
+
+.. code-block:: python
+
+    from pycents import Money
+
+    mny = Money.from_major("2.99", "EUR")
+    result = mny.convert("USD")
+    print(result.round())
+
 Next steps
 ==========
 

@@ -19,3 +19,7 @@ class BackendConfigurationError(PyCentsError):
 
 class InvalidCurrencyError(PyCentsError):
     """Raised when a custom currency is not registered"""
+
+
+class ProviderQueryError(PyCentsError):
+    """Raised when an Exchange Rate query"""

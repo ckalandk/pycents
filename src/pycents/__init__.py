@@ -1,4 +1,4 @@
-from . import allocation, formatting
+from . import allocation, conversion, formatting
 from .currency import Ccy, Currency, Xcy
 from .exceptions import (
     BackendConfigurationError,
@@ -31,6 +31,7 @@ __all__ = [
     # Submodules
     "allocation",
     "formatting",
+    "conversion",
     # Excpetions
     "PyCentsError",
     "InvalidFormatSpecError",

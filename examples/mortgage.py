@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from isomoney import Money
+from pycents import Money
 
 house_price = Money.from_major(400_000, "USD")
 down_payment = Money.from_major(80_000, "USD")

@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from isomoney import Ccy, Money
+from pycents import Ccy, Money
 
 # Constructing money amounts.
 price = Money.from_major(Decimal("29.99"), "USD")
@@ -15,10 +15,10 @@ assert price < total
 assert price != total
 
 # Accessing the internal representation (minor units).
-print(total.minor_units)
+print(total.as_minors)
 
 # Converting back to major units.
-print(total.to_decimal())
+print(total.as_majors)
 
 # Currency information.
 print(total._currency.ccy_code)
