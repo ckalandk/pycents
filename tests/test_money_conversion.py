@@ -33,14 +33,14 @@ def test_money_conversion_with_default_provider(monkeypatch):
         DumbProvider,
     )
     mny = Money.from_major("2.99", "EUR")
-    result = mny.convert_to("USD", provider=DumbProvider())
+    result = mny.exchange_to("USD", provider=DumbProvider())
     assert result.as_majors == mny.as_majors * Decimal("1.1313")
 
-    result = mny.convert_to("USD")
+    result = mny.exchange_to("USD")
     assert result.as_majors == mny.as_majors * Decimal("1.1516")
 
     # Use a date
-    result = mny.convert_to("USD", provider=DumbProvider("ECB", "some_date"))
+    result = mny.exchange_to("USD", provider=DumbProvider("ECB", "some_date"))
     assert result.as_majors == mny.as_majors * Decimal("2.8811")
 
 

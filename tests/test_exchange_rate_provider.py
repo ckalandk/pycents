@@ -85,7 +85,7 @@ def test_successfull_direct_rate_lookup_with_no_provider(provider):
     assert rate.info is not None
     assert rate.info.provider == "frankfurter"
     assert rate.info.ratetype == "blended"
-    assert rate.info.timestamp.date() == date(2026, 9, 13)
+    assert rate.info.asof == date(2026, 9, 13)
     assert rate.info.metadata == {}
 
 
@@ -99,7 +99,7 @@ def test_successfull_direct_rate_lookup_with_ecb_provider(provider, monkeypatch)
     assert rate.info is not None
     assert rate.info.provider == "ECB"
     assert rate.info.ratetype == "reference rate"
-    assert rate.info.timestamp.date() == date(2026, 9, 13)
+    assert rate.info.asof == date(2026, 9, 13)
     assert rate.info.metadata == {}
 
 

@@ -23,6 +23,7 @@ Utilities
 
    allocation
    formatting
+   conversion
 
 Exceptions
 ----------

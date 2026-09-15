@@ -370,36 +370,89 @@ the locale to use, see the following example on how to explicitly choose a local
 
     Locale configuration should be done after backend selection.
 
-Conversion
-==========
+Currency Conversion
+===================
 
-I know the rate just tell me how to convert:
---------------------------------------------
+There are two ways in **PyCents** to perform currency conversion:
+
+Manual Currency Conversion:
+---------------------------
+
+When an exchange rate is already available, create a
+:class:`~pycents.conversion.ExchangeRate` instance and multiply
+it by the monetary amount you want to convert:
 
 .. code-block:: python
 
-    from pycents import UnroundedMoney, Money, Currency
+    from pycents import Money, UnroundedMoney
     from pycents.conversion import ExchangeRate
 
     eur_usd = ExchangeRate.from_pair("EUR/USD", "1.1616")
+
     source = Money.from_major("2.99", "EUR")
     converted = source * eur_usd
 
     assert isinstance(converted, UnroundedMoney)
     print(converted.round())
 
-Using a provider
-----------------
+A conversion produces :class:`~pycents.UnroundedMoney` because applying an
+exchange rate can produce a fractional amount of the target currency's minor
+unit. Round the result explicitly when you need a :class:`~pycents.Money`.
 
-A provider is ....
+Automatic Currency Conversion
+-------------------------------
+
+To convert currencies without manually providing a conversion rate,
+**PyCents** can fetch live market rates for you automatically.
+
+If you do not explicitly pass a provider, PyCents defaults to the **ECB Provider**.
+This built-in provider uses the `Frankfurter API <https://frankfurter.dev/>`_
+to retrieve daily reference rates published by the European Central Bank.
+
+.. note::
+    Because the default provider queries an external service,
+    using ``exchange_to()`` requires an **active internet connection**.
+    However, PyCents automatically caches retrieved rates in memory,
+    so subsequent conversions for the same currency pair will resolve
+    instantly without making additional network calls.
 
 .. code-block:: python
 
     from pycents import Money
 
-    mny = Money.from_major("2.99", "EUR")
-    result = mny.convert("USD")
-    print(result.round())
+    source = Money.from_major("2.99", "EUR")
+    converted = source.exchange_to("USD")
+
+    print(converted.round())
+
+Using Custom Provider:
+----------------------
+
+You can also supply your own provider when you need a different exchange-rate
+source. A Custom provider must implement :class:`~pycents.conversion.ExchangeRateProvider`
+protocol.
+
+.. code-block:: python
+
+    from pycents import Money
+    from pycents.conversion import ExchangeRateProvider
+
+    class MyCustomProvider(ExchangeRateProvider):
+
+        def get_rate(
+            base: Currency,
+            quote: Currency,
+            /,
+            *,
+            asof: date|None=None,
+            **kwargs: Any
+        ) -> ExchangeRate:
+            ...
+
+    source = Money.from_major("2.99", "EUR")
+    converted = source.exchange_to("USD",provider=MyCustomProvider())
+
+    print(converted.round())
 
 Next steps
 ==========

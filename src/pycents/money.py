@@ -552,7 +552,7 @@ class Money(MonetaryAmount):
         result = self.as_majors * rate.rate
         return UnroundedMoney.from_major(result, rate.quote.ccy_code)
 
-    def convert_to(
+    def exchange_to(
         self, currency: str, provider: ExchangeRateProvider | None = None
     ) -> UnroundedMoney:
         target = Currency.from_code(currency.upper())

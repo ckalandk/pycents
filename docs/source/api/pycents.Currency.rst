@@ -15,6 +15,7 @@
 
       ~Currency.__init__
       ~Currency.from_code
+      ~Currency.from_country
 
 
 

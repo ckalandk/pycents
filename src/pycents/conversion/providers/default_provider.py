@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from typing import Any, cast
 from urllib.error import HTTPError
@@ -96,7 +96,7 @@ class DefaultProvider(ExchangeRateProvider):
         rateinfo = ExchangeRateInfo(
             provider=self.default_provider or "frankfurter",
             ratetype=ratetype,
-            timestamp=datetime.combine(asof, datetime.min.time()),
+            asof=asof,
         )
 
         ex_rate = ExchangeRate.from_pair(

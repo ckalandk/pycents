@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from types import MappingProxyType
 from typing import Any, Self
 
@@ -9,11 +9,11 @@ from typing import Any, Self
 class ExchangeRateInfo:
     provider: str
     ratetype: str
-    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
+    asof: date | datetime = field(default_factory=lambda: datetime.now(UTC))
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        core_keys = {"provider", "ratetype", "timestamp"}
+        core_keys = {"provider", "ratetype", "asof"}
         collisions = core_keys & self.metadata.keys()
         if collisions:
             bad_keys = ", ".join(sorted(collisions))
@@ -30,7 +30,7 @@ class ExchangeRateInfo:
         base = {
             "provider": self.provider,
             "ratetype": self.ratetype,
-            "timestamp": self.timestamp.isoformat(),
+            "timestamp": self.asof.isoformat(),
         }
         return {**base, **self.metadata}
 
@@ -43,5 +43,5 @@ class ExchangeRateInfo:
         metadata = {k: data[k] for k in data.keys() - core_keys}
 
         return cls(
-            provider=provider, ratetype=ratetype, timestamp=timestamp, metadata=metadata
+            provider=provider, ratetype=ratetype, asof=timestamp, metadata=metadata
         )

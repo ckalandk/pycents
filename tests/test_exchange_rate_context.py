@@ -12,8 +12,8 @@ class TestExchangeRateInfo:
 
         assert ctx.provider == "ECB"
         assert ctx.ratetype == "SPOT"
-        assert isinstance(ctx.timestamp, datetime)
-        assert ctx.timestamp.tzinfo is UTC
+        assert isinstance(ctx.asof, datetime)
+        assert ctx.asof.tzinfo is UTC
         assert isinstance(ctx.metadata, MappingProxyType)
         assert len(ctx.metadata) == 0
 
@@ -22,11 +22,11 @@ class TestExchangeRateInfo:
         ctx = ExchangeRateInfo(
             provider="ECB",
             ratetype="SPOT",
-            timestamp=dt,
+            asof=dt,
             metadata={"batch_id": "12345", "feed": "XML"},
         )
 
-        assert ctx.timestamp == dt
+        assert ctx.asof == dt
         assert dict(ctx.metadata) == {"batch_id": "12345", "feed": "XML"}
         assert isinstance(ctx.metadata, MappingProxyType)
 
@@ -35,7 +35,7 @@ class TestExchangeRateInfo:
         ctx = ExchangeRateInfo(
             provider="Bloomberg",
             ratetype="IMMEDIATE",
-            timestamp=dt,
+            asof=dt,
             metadata={"latency_ms": "42", "node": "eu-west-1"},
         )
 
@@ -50,7 +50,7 @@ class TestExchangeRateInfo:
 
     def test_as_dict_without_metadata(self):
         dt = datetime(2026, 9, 8, 15, 30, 0, tzinfo=UTC)
-        ctx = ExchangeRateInfo(provider="Bloomberg", ratetype="IMMEDIATE", timestamp=dt)
+        ctx = ExchangeRateInfo(provider="Bloomberg", ratetype="IMMEDIATE", asof=dt)
 
         expected = {
             "provider": "Bloomberg",
@@ -72,7 +72,7 @@ class TestExchangeRateInfo:
 
         assert ctx.provider == "Reuters"
         assert ctx.ratetype == "EOD"
-        assert ctx.timestamp == datetime(2026, 9, 8, 23, 59, 59, tzinfo=UTC)
+        assert ctx.asof == datetime(2026, 9, 8, 23, 59, 59, tzinfo=UTC)
         assert dict(ctx.metadata) == {"batch_id": "999", "status": "verified"}
         assert isinstance(ctx.metadata, MappingProxyType)
 
@@ -107,7 +107,7 @@ class TestExchangeRateInfo:
         ctx = ExchangeRateInfo(
             provider="ECB",
             ratetype="SPOT",
-            timestamp=dt,
+            asof=dt,
             metadata={"batch_id": "12345", "feed": "XML"},
         )
         assert ctx.batch_id == "12345"

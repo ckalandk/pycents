@@ -8,3 +8,4 @@ User Guide
    allocation
    rounding
    formatting
+   conversion

@@ -16,6 +16,7 @@
       ~Money.__init__
       ~Money.as_dict
       ~Money.cash
+      ~Money.exchange_to
       ~Money.from_dict
       ~Money.from_major
       ~Money.from_minor

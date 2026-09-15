@@ -46,7 +46,7 @@ class TestExchangeRate:
         info = ExchangeRateInfo(
             provider="ECB",
             ratetype="IMMEDIATE",
-            timestamp=datetime.fromisoformat("2026-09-08T00:00:00+00:00"),
+            asof=datetime.fromisoformat("2026-09-08T00:00:00+00:00"),
         )
 
         rate = ExchangeRate.from_pair(
@@ -113,12 +113,12 @@ class TestExchangeRate:
         context1 = ExchangeRateInfo(
             provider="ECB",
             ratetype="IMMEDIATE",
-            timestamp=datetime.fromisoformat("2026-09-08T00:00:00+00:00"),
+            asof=datetime.fromisoformat("2026-09-08T00:00:00+00:00"),
         )
         context2 = ExchangeRateInfo(
             provider="Black Market",
             ratetype="FISHY",
-            timestamp=datetime.fromisoformat("2026-09-08T00:01:00+00:00"),
+            asof=datetime.fromisoformat("2026-09-08T00:01:00+00:00"),
         )
 
         usd_eur = ExchangeRate.from_pair(
@@ -190,7 +190,7 @@ class TestExchangeRate:
         context = ExchangeRateInfo(
             provider="ECB",
             ratetype="IMMEDIATE",
-            timestamp=datetime.fromisoformat("2026-09-08T00:00:00+00:00"),
+            asof=datetime.fromisoformat("2026-09-08T00:00:00+00:00"),
         )
 
         usd_eur = ExchangeRate.from_pair(
@@ -264,7 +264,7 @@ class TestExchangeRate:
         context = ExchangeRateInfo(
             provider="ECB",
             ratetype="IMMEDIATE",
-            timestamp=datetime.fromisoformat("2026-09-08T00:00:00+00:00"),
+            asof=datetime.fromisoformat("2026-09-08T00:00:00+00:00"),
         )
         rate = ExchangeRate.from_pair(
             "USD/EUR",
@@ -299,7 +299,7 @@ class TestExchangeRate:
         context = ExchangeRateInfo(
             provider="ECB",
             ratetype="IMMEDIATE",
-            timestamp=datetime.fromisoformat("2026-09-08T00:00:00+00:00"),
+            asof=datetime.fromisoformat("2026-09-08T00:00:00+00:00"),
         )
         rate = ExchangeRate.from_pair(
             "USD/EUR",
@@ -340,7 +340,7 @@ class TestExchangeRate:
         ctx = ExchangeRateInfo(
             provider="BBC",
             ratetype="one",
-            timestamp=datetime.fromisoformat("2026-09-08T00:00:00+00:00"),
+            asof=datetime.fromisoformat("2026-09-08T00:00:00+00:00"),
             metadata=metadata,
         )
         usd_eur = ExchangeRate.from_pair("USD/EUR", "0.85", info=ctx)
