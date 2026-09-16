@@ -4,6 +4,7 @@ from .exceptions import (
     BackendConfigurationError,
     CurrencyMismatchError,
     InvalidFormatSpecError,
+    ProviderQueryError,
     PyCentsError,
 )
 from .money import Money, UnroundedMoney
@@ -37,4 +38,5 @@ __all__ = [
     "InvalidFormatSpecError",
     "CurrencyMismatchError",
     "BackendConfigurationError",
+    "ProviderQueryError",
 ]

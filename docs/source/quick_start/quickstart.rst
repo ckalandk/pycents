@@ -395,9 +395,50 @@ it by the monetary amount you want to convert:
     assert isinstance(converted, UnroundedMoney)
     print(converted.round())
 
-A conversion produces :class:`~pycents.UnroundedMoney` because applying an
-exchange rate can produce a fractional amount of the target currency's minor
-unit. Round the result explicitly when you need a :class:`~pycents.Money`.
+.. note::
+    A conversion produces :class:`~pycents.UnroundedMoney` because applying an
+    exchange rate can produce a fractional amount of the target currency's minor
+    unit. Round the result explicitly when you need a :class:`~pycents.Money`.
+
+When you have several known exchange rates, you can store them in a
+:class:`~pycents.conversion.FixedRateProvider` and use the same
+:meth:`~pycents.Money.exchange_to` API for each conversion:
+
+.. code-block:: python
+
+    from functools import partial
+
+    from pycents import Money, Currency
+    from pycents.conversion import FixedRateProvider, ExchangeRate
+
+    fixed = FixedRateProvider()
+
+    fixed.add_rate("JPY", "USD", "154.2")
+    fixed.add_rate("EUR", "USD", "0.86329")
+    fixed.add_rate("GBP", "USD", "0.73985")
+
+    to_usd = partial(
+        Money.exchange_to,
+        currency="USD",
+        provider=fixed
+    )
+
+    prices = [
+        Money.from_major(210, "JPY"),
+        Money.from_major("2.99", "EUR"),
+        Money.from_major(2, "GBP"),
+    ]
+
+    total = Money.sum(
+        [to_usd(price) for price in prices]
+    )
+
+    print(total.round())
+
+.. note::
+    :class:`~pycents.conversion.FixedRateProvider` uses only the rates
+    explicitly added to it. It does not perform rate inversion or cross-rate
+    calculations. Add every currency pair you intend to request.
 
 Automatic Currency Conversion
 -------------------------------
@@ -450,7 +491,7 @@ protocol.
             ...
 
     source = Money.from_major("2.99", "EUR")
-    converted = source.exchange_to("USD",provider=MyCustomProvider())
+    converted = source.exchange_to("USD", provider=MyCustomProvider())
 
     print(converted.round())
 

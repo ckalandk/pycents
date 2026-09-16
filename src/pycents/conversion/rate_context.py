@@ -7,6 +7,22 @@ from typing import Any, Self
 
 @dataclass(frozen=True, slots=True)
 class ExchangeRateInfo:
+    """Describes the provenance and additional information of an exchange rate.
+
+    Attributes:
+        provider: Name of the exchange-rate provider.
+        ratetype: Type or classification of the rate,
+            such as ``"mid"`` or ``"reference"``.
+        asof: Date or timestamp to which the exchange rate applies.
+            Defaults to the current UTC time.
+        metadata: Additional provider-specific information.
+            Keys ``"provider"``, ``"ratetype"``, and ``"asof"`` are reserved and
+            cannot be used in metadata. Metadata is exposed both through the
+            ``metadata`` mapping and as attributes on the instance.
+            For example, a metadata entry ``{"source": "ECB"}`` can be accessed as
+            ``info.source``.
+    """
+
     provider: str
     ratetype: str
     asof: date | datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -27,6 +43,11 @@ class ExchangeRateInfo:
         raise AttributeError(f"'{type(self).__name__}' has no attribute '{name}'")
 
     def as_dict(self) -> dict[str, str]:
+        """Serialize the exchange-rate information to a dictionary.
+
+        Returns: A dictionary containing the provider, rate type, ISO-formatted
+            timestamp, and metadata entries.
+        """
         base = {
             "provider": self.provider,
             "ratetype": self.ratetype,
@@ -35,7 +56,7 @@ class ExchangeRateInfo:
         return {**base, **self.metadata}
 
     @classmethod
-    def from_dict(cls, data: dict[str, str]) -> Self:
+    def from_dict(cls, data: dict[str, Any]) -> Self:
         core_keys = {"provider", "ratetype", "timestamp"}
         provider = data["provider"]
         ratetype = data["ratetype"]
