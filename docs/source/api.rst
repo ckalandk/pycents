@@ -20,10 +20,11 @@ Utilities
 
 .. autosummary::
    :toctree: api/
+   :recursive:
 
    allocation
-   formatting
    conversion
+   formatting
 
 Exceptions
 ----------

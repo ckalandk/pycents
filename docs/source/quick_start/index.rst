@@ -6,3 +6,4 @@ QuickStart
 
    installation
    quickstart
+   changelog

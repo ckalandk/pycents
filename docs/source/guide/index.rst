@@ -6,6 +6,6 @@ User Guide
 
    money
    allocation
-   rounding
    formatting
    conversion
+   philosophy
