@@ -588,9 +588,7 @@ class Money(MonetaryAmount):
         return self._amount != 0
 
     @classmethod
-    def sum(
-        cls, iterable: Iterable[MonetaryAmount], *, rounding: RoundingMode | None = None
-    ) -> MonetaryAmount:
+    def sum(cls, iterable: Iterable[MonetaryAmount]) -> UnroundedMoney:
         """Bulk addition for Money."""
         iterator = iter(iterable)
         try:
@@ -600,20 +598,15 @@ class Money(MonetaryAmount):
                 "Expected an iterable of Moneys objects, got an empty iterable"
             ) from None
         ccy = first_item.currency
-        total = first_item._as_decimal
+        total = first_item.as_majors
         for item in iterator:
             if item.currency != ccy:
                 raise CurrencyMismatchError(
                     "Cannot add money amounts with different currencies."
                 )
-            total += item._as_decimal
-        if total == total.to_integral_value():
-            return cls(int(total), ccy)
+            total += item.as_majors
 
-        unrounded = UnroundedMoney(Money.zero(ccy.ccy_code))
-        unrounded._amount = total
-        if rounding is not None:
-            return unrounded.round(rounding)
+        unrounded = UnroundedMoney.from_major(total, ccy.ccy_code)
         return unrounded
 
     def __hash__(self) -> int:

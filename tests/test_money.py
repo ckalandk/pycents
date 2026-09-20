@@ -487,14 +487,12 @@ def test_money_str(amount, currency, expected):
 def test_money_bulk_sum(money):
     amounts = [money(i * 10) for i in range(100)]
     result = Money.sum(amounts)
-    assert isinstance(result, Money)
-    assert result._amount == 49500
+    assert result.as_majors == Decimal(495)
 
     amounts[55] = amounts[55] * Decimal("1.53")
     result = Money.sum(amounts)
 
-    assert isinstance(result, UnroundedMoney)
-    assert result._amount == Decimal("49791.50")
+    assert result.as_majors == Decimal("497.915")
 
 
 def test_money_bulk_sum_rejects_empty_iterable():
@@ -509,22 +507,6 @@ def test_money_bulk_sum_rejects_different_currencies(money):
     seq = [money(10, "USD"), money(100, "EUR")]
     with pytest.raises(CurrencyMismatchError):
         Money.sum(seq)
-
-
-def test_money_bulk_sum_with_no_rounding(money):
-    seq = [money(2115, "USD"), money(120, "USD")]
-    seq[0] = seq[0] / 1000
-    result = Money.sum(seq)
-    assert isinstance(result, UnroundedMoney)
-    assert result._amount == Decimal("122.115")
-
-
-def test_money_bulk_sum_with_rounding(money):
-    seq = [money(2115, "USD"), money(120, "USD")]
-    seq[0] = seq[0] / 1000
-    result = Money.sum(seq, rounding=RoundingMode.UP)
-    assert isinstance(result, Money)
-    assert result._amount == 123
 
 
 def test_money_divmod(money):
