@@ -81,8 +81,10 @@ print("Allocated Shares:", f"[{result}]")
 ## Documentation
 
 Documentation and API reference are available at [pycents.readthedocs.io](https://pycents.readthedocs.io/).
-This is still a work in progress, some guide are complete
-(Quickstart, formatting and allocation) but still need to be polished.
+
+## ChangeLog
+
+See the [full ChangeLog](https://github.com/ckalandk/pycents/blob/main/Changelog).
 
 ## License
 
