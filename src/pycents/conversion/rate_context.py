@@ -15,12 +15,12 @@ class ExchangeRateInfo:
             such as ``"mid"`` or ``"reference"``.
         asof: Date or timestamp to which the exchange rate applies.
             Defaults to the current UTC time.
-        metadata: Additional provider-specific information.
+        metadata: Additional rate-specific information.
             Keys ``"provider"``, ``"ratetype"``, and ``"asof"`` are reserved and
             cannot be used in metadata. Metadata is exposed both through the
             ``metadata`` mapping and as attributes on the instance.
-            For example, a metadata entry ``{"source": "ECB"}`` can be accessed as
-            ``info.source``.
+            For example, a metadata entry ``{"source_url": "www.ecb.eu"}`` can be
+            accessed as ``info.source_url``.
     """
 
     provider: str

@@ -351,12 +351,12 @@ class TestExchangeRate:
 
         expected = {
             "base": "USD",
-            "term": "CAD",
+            "quote": "CAD",
             "rate": "0.9903265",
             "sources": [
                 {
                     "base": "USD",
-                    "term": "EUR",
+                    "quote": "EUR",
                     "rate": "0.85",
                     "info": {
                         "provider": "BBC",
@@ -369,7 +369,7 @@ class TestExchangeRate:
                 },
                 {
                     "base": "EUR",
-                    "term": "CAD",
+                    "quote": "CAD",
                     "rate": "1.16509",
                     "info": {
                         "provider": "BBC",

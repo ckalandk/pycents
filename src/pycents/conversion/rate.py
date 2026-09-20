@@ -17,7 +17,7 @@ __all__ = ["ExchangeRate", "ExchangeRateData"]
 
 class ExchangeRateData(TypedDict):
     base: str
-    term: str
+    quote: str
     rate: str
     sources: NotRequired[list[ExchangeRateData]]
     info: NotRequired[dict[str, str]]
@@ -38,7 +38,7 @@ class ExchangeRate:
         rate (Decimal): The exact conversion factor. Must be strictly positive.
         path (tuple[ExchangeRate, ...]): The sequence of underlying exchange rates used
             to derive this rate, if it is a cross rate. Defaults to an empty tuple.
-        context (ExchangeRateContext | None): Optional metadata associated with the
+        info (ExchangeRateContext | None): Optional context associated with the
             rate, such as the data provider or effective date. Defaults to None.
     """
 
@@ -83,7 +83,7 @@ class ExchangeRate:
                 For example, ``"USD/EUR"`` represents an exchange rate from USD to EUR.
             rate: Exchange rate factor. Integers, strings, and :class:`~decimal.Decimal`
                 instances are accepted.
-            context: Optional context associated with the exchange rate.
+            info: Optional context associated with the exchange rate.
 
         Returns:
             A new :class:`ExchangeRate` instance.
@@ -94,13 +94,12 @@ class ExchangeRate:
         Examples:
             Create an exchange rate from USD to EUR::
             >>> rate = ExchangeRate.from_ratio("USD/EUR", "0.875")
-            The rate can also be provided as an integer or ``Decimal``::
             >>> rate = ExchangeRate.from_ratio("USD/EUR", Decimal("0.875"))
             Context information can be supplied as well::
             >>> rate = ExchangeRate.from_ratio(
             ...     "USD/EUR",
             ...     "0.875",
-            ...     context=context,
+            ...     info=ExchangeRateInfo(...),
             )
         """
         _base, _term = ratio.split("/", 1)
@@ -125,8 +124,9 @@ class ExchangeRate:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        """Create an exchange rate from its serialized representation."""
         base = Currency.from_code(data["base"])
-        term = Currency.from_code(data["term"])
+        quote = Currency.from_code(data["quote"])
         rate = Decimal(data["rate"])
         path: tuple[ExchangeRate, ...] = tuple()
         if "sources" in data:
@@ -134,12 +134,13 @@ class ExchangeRate:
         info = None
         if "info" in data:
             info = ExchangeRateInfo.from_dict(data["info"])
-        return cls(base=base, quote=term, rate=rate, path=path, info=info)
+        return cls(base=base, quote=quote, rate=rate, path=path, info=info)
 
     def as_dict(self) -> ExchangeRateData:
+        """Return the exchange rate as a serializable dictionary."""
         data: ExchangeRateData = {
             "base": self.base.ccy_code,
-            "term": self.quote.ccy_code,
+            "quote": self.quote.ccy_code,
             "rate": str(self.rate),
         }
         if self.path:
