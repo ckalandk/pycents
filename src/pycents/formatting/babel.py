@@ -61,14 +61,7 @@ def _adapt_pattern_to_xcurrency_minor_unit(
     char = "#" if trim_trailing_zeros else "0"
     fraction_part = "." + (char * currency.minor_units)
 
-    # if currency is an ISO 4217 Currency and users
-    # didn't request to trim insignificant zeros
-    # do not change the pattern.
-    if currency._is_iso() and not trim_trailing_zeros:
-        return pattern
-
     custom_pattern = re.sub(r"0([^0]*(?:;|$))", rf"0{fraction_part}\g<1>", base_pattern)
-
     return custom_pattern
 
 

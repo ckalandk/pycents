@@ -1011,9 +1011,9 @@ class TestBabelFormatter:
     @pytest.mark.parametrize(
         "amount, expected",
         [
-            (Decimal("1500"), "USD\xa01.5K"),
-            (Decimal("1500000"), "USD\xa01.5M"),
-            (Decimal("1500000000"), "USD\xa01.5B"),
+            (Decimal("1500"), "USD\xa01.50K"),
+            (Decimal("1500000"), "USD\xa01.50M"),
+            (Decimal("1500000000"), "USD\xa01.50B"),
         ],
     )
     def test_compact_notation_positive(self, babel_formatter, amount, expected, usd):
