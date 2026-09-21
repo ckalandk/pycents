@@ -10,7 +10,7 @@ from .exceptions import (
 from .money import Money, UnroundedMoney
 from .rounding import RoundingMode
 
-__version__ = "1.3.0"
+__version__ = "1.3.1"
 
 Xcy.register("TST", "Test Coin", 2, "¤")
 Xcy.register("BTC", "Bitcoin", 8, "₿")
