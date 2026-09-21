@@ -45,6 +45,7 @@ and high-precision operations:
 * Locale-aware currency formatting
 * Pluggable formatting backends
 * Custom format specification
+* **Flexible currency conversion** with manual rates and exchange-rate providers
 
 ## Example
 

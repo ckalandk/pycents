@@ -1,6 +1,8 @@
 ===================
 Welcome to PyCents
 ===================
+.. meta::
+   :google-site-verification: qP6egKViTRT_I5KnJptBv6p7mQl05d2nZ5YwlMw8Mvs
 
 **PyCents** is a strongly typed Python library for representing and manipulating monetary
 values with ISO 4217-compliant currencies and explicit rounding semantics.
