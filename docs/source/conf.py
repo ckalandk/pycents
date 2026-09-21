@@ -6,9 +6,13 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import os
 import re
 import sys
 from pathlib import Path
+
+html_baseurl = os.environ.get("READTHEDOCS_CANONICAL_URL", "/")
+
 
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root / "src"))
