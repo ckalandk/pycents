@@ -1,5 +1,6 @@
 import decimal
 import re
+import sys
 from decimal import Decimal
 from typing import Literal, cast
 
@@ -24,6 +25,34 @@ from .base_formatter import BaseFormatter
 from .formatspec import FormatSpec
 
 __all__ = ["BabelFormatter"]
+
+
+DEFAULT_LOCALE = "en_US"
+
+
+def _get_locale_host() -> str:
+    """
+    Retrieves the BCP-47 locale tag.
+
+    This implementation is adapted from the Spyder IDE (spyder-ide/spyder).
+    Copyright (c) Spyder Project Contributors. Licensed under the MIT License.
+    See:  https://github.com/spyder-ide/spyder/issues/23318
+    """
+    if sys.platform == "win32":
+        from ctypes import create_unicode_buffer, windll
+
+        bufsize = 85  # LOCALE_NAME_MAX_LENGTH
+        buf = create_unicode_buffer(bufsize)
+        if windll.kernel32.GetUserDefaultLocaleName(buf, bufsize):
+            localhost = buf.value
+        else:
+            localhost = DEFAULT_LOCALE
+    else:
+        try:
+            localhost = str(Locale.default())
+        except Exception:
+            localhost = DEFAULT_LOCALE
+    return localhost
 
 
 def _format_compact_decimal(number: Decimal) -> tuple[Decimal, str]:
@@ -267,8 +296,9 @@ def _format_currency(
 
 class BabelFormatter(BaseFormatter):
     def __init__(self, locale: str = "") -> None:
-        _locale = str(Locale.parse(locale) if locale else Locale.default())
-        super().__init__(_locale)
+        _locale = _get_locale_host()
+        _default = str(Locale.parse(locale)) if locale else _locale
+        super().__init__(_default)
 
     @property
     def locale(self) -> str:
