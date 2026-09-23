@@ -11,7 +11,7 @@
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 </div>
 
-**pycents** is a strongly typed Python library for representing and manipulating
+**pycents** is a fully typed Python library for representing and manipulating
 monetary values with ISO 4217 and custom currencies, explicit rounding semantics
 and rich formatting options.
 
