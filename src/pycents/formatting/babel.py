@@ -30,7 +30,7 @@ __all__ = ["BabelFormatter"]
 DEFAULT_LOCALE = "en_US"
 
 
-def _get_locale_host() -> str:
+def _get_locale_host() -> str:  # pragma: no cover
     """
     Retrieves the BCP-47 locale tag.
 

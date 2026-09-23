@@ -4,6 +4,27 @@ Changelog
 
 All notable changes to this project will be documented in this file.
 
+Version 1.3.2 — 2026-09-23
+==========================
+
+Bug fixes
+---------
+
+* Fix default locale detection on Windows, with an
+  `en_US` fallback when detection fails.
+
+Version 1.3.1 — 2026-09-21
+==========================
+
+Bug Fixes
+---------
+
+### Bug fixes
+
+* Fix a bug where the Babel formatting backend did not account for
+  currency minor units.
+* Fix the return type of `Money.sum` and improve its bulk addition logic.
+
 Version 1.3.0 — 2026-09-20
 ==========================
 
