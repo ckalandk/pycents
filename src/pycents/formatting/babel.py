@@ -27,10 +27,10 @@ from .formatspec import FormatSpec
 __all__ = ["BabelFormatter"]
 
 
-DEFAULT_LOCALE = "en_US"
+DEFAULT_LOCALE = Locale.parse("en_US")
 
 
-def _get_locale_host() -> str:  # pragma: no cover
+def _get_locale_host() -> Locale:  # pragma: no cover
     """
     Retrieves the BCP-47 locale tag.
 
@@ -44,12 +44,12 @@ def _get_locale_host() -> str:  # pragma: no cover
         bufsize = 85  # LOCALE_NAME_MAX_LENGTH
         buf = create_unicode_buffer(bufsize)
         if windll.kernel32.GetUserDefaultLocaleName(buf, bufsize):
-            localhost = buf.value
+            localhost = Locale.parse(buf.value, sep="-")
         else:
             localhost = DEFAULT_LOCALE
     else:
         try:
-            localhost = str(Locale.default())
+            localhost = Locale.default()
         except Exception:
             localhost = DEFAULT_LOCALE
     return localhost
@@ -297,12 +297,12 @@ def _format_currency(
 class BabelFormatter(BaseFormatter):
     def __init__(self, locale: str = "") -> None:
         _locale = _get_locale_host()
-        _default = str(Locale.parse(locale)) if locale else _locale
-        super().__init__(_default)
+        _default = Locale.parse(locale) if locale else _locale
+        super().__init__(str(_default))
 
     @property
     def locale(self) -> str:
-        return str(self._locale)
+        return self._locale
 
     @locale.setter
     def locale(self, value: str) -> None:
