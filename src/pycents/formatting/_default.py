@@ -83,6 +83,14 @@ class _FormatContext:
         self.backend_formatter._default_spec.group_separator = value
 
     @property
+    def trim(self) -> bool:
+        return self.backend_formatter._default_spec.trim_trailing_zeros
+
+    @trim.setter
+    def trim(self, value: bool) -> None:
+        self.backend_formatter._default_spec.trim_trailing_zeros = value
+
+    @property
     def rounding(self) -> RoundingMode:
         return self.backend_formatter._rounding
 
