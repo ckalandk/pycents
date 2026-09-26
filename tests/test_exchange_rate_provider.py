@@ -69,10 +69,10 @@ def test_default_provider_properties():
     assert provider.default_provider == "ECB"
     assert provider.rate_date == date(2026, 9, 14)
 
-    provider.provider = None
+    provider.name = None
     provider.rate_date = date(2027, 9, 14)
 
-    assert provider.provider == "Frankfurter"
+    assert provider.name == "Frankfurter"
     assert provider.rate_date == date(2027, 9, 14)
 
 
@@ -90,7 +90,7 @@ def test_successfull_direct_rate_lookup_with_no_provider(provider):
 
 
 def test_successfull_direct_rate_lookup_with_ecb_provider(provider, monkeypatch):
-    provider.provider = "ECB"
+    provider.name = "ECB"
     rate = provider.get_rate(Currency.from_code("EUR"), Currency.from_code("USD"))
     assert rate.base.ccy_code == "EUR"
     assert rate.quote.ccy_code == "USD"
@@ -111,7 +111,7 @@ def test_succesfull_rate_lookup_with_date(provider):
 
     assert eur_usd.rate == Decimal("1.1313")
 
-    provider.provider = "ECB"
+    provider.name = "ECB"
 
     eur_usd = provider.get_rate(
         Currency.from_code("EUR"), Currency.from_code("USD"), asof=date(1999, 12, 1)
@@ -121,7 +121,7 @@ def test_succesfull_rate_lookup_with_date(provider):
 
 
 def test_succesfull_cross_rate_lookup(provider):
-    provider.provider = "ECB"
+    provider.name = "ECB"
     eur_usd = provider.get_rate(Currency.from_code("EUR"), Currency.from_code("USD"))
     eur_jpy = provider.get_rate(Currency.from_code("EUR"), Currency.from_code("JPY"))
     usd_jpy = provider.get_rate(Currency.from_code("USD"), Currency.from_code("JPY"))
@@ -222,7 +222,7 @@ def test_provider_info(monkeypatch):
     assert info.code == "Frankfurter"
     assert info.name == "Frankfurter"
 
-    provider.provider = "ECB"
+    provider.name = "ECB"
     info = provider.provider_info()
 
     assert info.code == "ECB"
@@ -257,7 +257,7 @@ def test_provider_info_cache(provider, monkeypatch):
     _provider_cache_patch = {}
     monkeypatch.setattr(DefaultProvider, "_metadata_cache", _provider_cache_patch)
 
-    provider.provider = "ECB"
+    provider.name = "ECB"
 
     assert len(_provider_cache_patch) == 0
 

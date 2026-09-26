@@ -21,6 +21,12 @@ _rate_cache_key = tuple[str, str, str | None, date | None]
 __all__ = ["DefaultProvider", "ProviderInfo"]
 
 
+def _get_request(url: str) -> Request:
+    return Request(
+        url, headers={"User-Agent": "pycents/1.3.0", "Accept": "application/json"}
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class ProviderInfo:
     code: str
@@ -60,11 +66,11 @@ class DefaultProvider(ExchangeRateProvider):
         self._date = value
 
     @property
-    def provider(self) -> str:
+    def name(self) -> str:
         return self.default_provider or "Frankfurter"
 
-    @provider.setter
-    def provider(self, value: str | None) -> None:
+    @name.setter
+    def name(self, value: str | None) -> None:
         self.default_provider = value
 
     def _get_rate(
@@ -80,31 +86,16 @@ class DefaultProvider(ExchangeRateProvider):
 
         if cache_key in type(self)._rate_cache:
             return self._rate_cache[cache_key]
-        metadata = None
-        if self.default_provider is not None:
-            metadata = self.provider_info()
-
-        ratetype = metadata.ratetype if metadata is not None else "blended"
-
         url = self._build_url_query(
             base.ccy_code, quote.ccy_code, asof.isoformat() if asof else ""
         )
 
         rate = self._fetch_rate(url)
 
-        asof = date.fromisoformat(rate["date"])
-        rateinfo = ExchangeRateInfo(
-            provider=self.default_provider or "frankfurter",
-            ratetype=ratetype,
-            asof=asof,
-        )
+        exchange_rate = self._make_exchange_rate(rate)
+        self._rate_cache[cache_key] = exchange_rate
 
-        ex_rate = ExchangeRate.from_pair(
-            f"{rate['base']}/{rate['quote']}", Decimal(str(rate["rate"])), info=rateinfo
-        )
-
-        type(self)._rate_cache[cache_key] = ex_rate
-        return ex_rate
+        return exchange_rate
 
     def get_rate(
         self,
@@ -140,9 +131,7 @@ class DefaultProvider(ExchangeRateProvider):
         return url
 
     def _fetch_rate(self, url: str) -> dict[str, Any]:
-        req = Request(
-            url, headers={"User-Agent": "pycents/1.3.0", "Accept": "application/json"}
-        )
+        req = _get_request(url)
 
         try:
             with urlopen(req, timeout=5) as response:
@@ -155,10 +144,7 @@ class DefaultProvider(ExchangeRateProvider):
 
     def _fetch_provider_details(self) -> ProviderInfo:
         url = f"https://api.frankfurter.dev/v2/providers/{self.default_provider}"
-        req = Request(
-            url, headers={"User-Agent": "pycents/1.3.0", "Accept": "application/json"}
-        )
-
+        req = _get_request(url)
         try:
             with urlopen(req, timeout=5) as response:
                 provider = json.load(response)
@@ -187,3 +173,43 @@ class DefaultProvider(ExchangeRateProvider):
         provider = self._fetch_provider_details()
         type(self)._metadata_cache[code_upper] = provider
         return provider
+
+    def prefetch_rates(self) -> None:
+        base_url = "https://api.frankfurter.dev/v2/rates"
+        if self.default_provider is not None:
+            base_url += f"?providers={self.default_provider}"
+        req = _get_request(base_url)
+        try:
+            with urlopen(req, timeout=5) as response:
+                rates = json.load(response)
+        except HTTPError as err:
+            error = json.load(err)
+            raise ProviderQueryError(f"'{error['message']}'") from err
+        for rate in rates:
+            exchange_rate = self._make_exchange_rate(rate)
+            cache_key = (
+                exchange_rate.base.ccy_code,
+                exchange_rate.quote.ccy_code,
+                self.default_provider,
+                self.rate_date,
+            )
+            self._rate_cache[cache_key] = exchange_rate
+
+    def _make_exchange_rate(self, data: dict[str, Any]) -> ExchangeRate:
+        metadata = None
+        if self.default_provider is not None:
+            metadata = self.provider_info()
+
+        ratetype = metadata.ratetype if metadata is not None else "blended"
+
+        asof = date.fromisoformat(data["date"])
+        rateinfo = ExchangeRateInfo(
+            provider=self.default_provider or "frankfurter",
+            ratetype=ratetype,
+            asof=asof,
+        )
+
+        ex_rate = ExchangeRate.from_pair(
+            f"{data['base']}/{data['quote']}", Decimal(str(data["rate"])), info=rateinfo
+        )
+        return ex_rate
