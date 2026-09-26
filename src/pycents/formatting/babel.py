@@ -130,6 +130,7 @@ def _format_currency_name(
             format_type="name",
             decimal_quantization=False,
             currency_digits=False,
+            group_separator=spec.group_separator,
             numbering_system=numbering_system,
         )
 
@@ -161,6 +162,7 @@ def _format_currency_symbol(
             format_type=fmt_type,
             currency_digits=False,
             decimal_quantization=False,
+            group_separator=spec.group_separator,
             numbering_system=numbering_system,
         )
     else:
