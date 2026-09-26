@@ -98,7 +98,7 @@ install the ICU development libraries first:
 .. code-block:: bash
 
     sudo apt install pkg-config libicu-dev
-    pip install PyICU
+    pip install pyicu
 
 Other Linux distributions provide PyICU and/or ICU through their respective
 package managers. Consult your distribution's package documentation if the
@@ -165,6 +165,51 @@ or:
 .. code-block:: bash
 
     python -c "import icu; print(icu.ICU_VERSION)"
+
+Running the Examples
+--------------------
+
+The PyCents repository includes example applications demonstrating
+how PyCents can be used in real applications.
+
+The examples have their own optional dependencies, which are kept separate
+from the core development dependencies.
+
+Textual examples
+^^^^^^^^^^^^^^^^
+
+The Textual examples require the examples-textual dependency group.
+
+From the repository root, run a Textual example with:
+
+.. code-block:: bash
+
+    uv run --group examples-textual python examples/<example>.py
+
+For example:
+
+.. code-block:: bash
+
+    uv run --group examples-textual python examples/exchange_tui.py
+
+Flask example
+^^^^^^^^^^^^^
+
+The Flask example requires the examples-flask dependency group.
+
+From the repository root, run:
+
+.. code-block:: bash
+
+    uv run --group examples-flask python examples/<example>.py
+
+Alternatively, if the example is designed to be run through the Flask CLI:
+
+.. code-block:: bash
+
+    uv run --group examples-flask flask --app examples/<example>.py run
+
+The exact command depends on the structure of the example application.
 
 Next steps
 ----------

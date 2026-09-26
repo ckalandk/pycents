@@ -70,6 +70,12 @@ dev = [
     "sphinx-rtd-theme>=3.1.0",
     "tox>=4.58.0",
 ]
+examples-flask = [
+    "flask>=3.1.3",
+]
+examples-textual = [
+    "textual>=8.2.8",
+]
 
 [build-system]
 requires = ["hatchling"]

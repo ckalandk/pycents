@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from pycents import Money, RoundingMode, UnroundedMoney
+from pycents import Money, UnroundedMoney
 
 items = [
     {"name": "item1", "price": "249.99", "discount": "0.15"},
@@ -21,22 +21,8 @@ prices_after_discounts = [
     for mny, item in zip(prices, items, strict=True)
 ]
 
-# `total` is either a `Money` or a `UnroundedMoney` instance
-# You can, either supply a rounding mode via the keyword argument `rounding`
-# to get a Money instance
-
-total = Money.sum(prices_after_discounts, rounding=RoundingMode.UP)
-assert isinstance(total, Money)
-
-print(total)  # Output: USD 1221.14
-# If you don't provide a rounding mode the result will be an
-# `UnroundedMoney` instance if there is at least one `UnroundedMoney`
-# instance in the provided list, or a `Money` object otherwise
-
 total = Money.sum(prices_after_discounts)
 assert isinstance(total, UnroundedMoney)
 
-# At this stage you can carry on with any remainding calculation
-# or round the result to get a `Money` instance
 final_price = total.round()
 print(final_price)  # Output: USD 1221.14
