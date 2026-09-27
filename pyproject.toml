@@ -1,6 +1,6 @@
 [project]
 name = "pycents"
-version = "1.3.3"
+version = "1.4.0"
 description = "A fully typed money and currency library for ISO 4217 and custom currencies"
 readme = "README.md"
 license = "MIT"
