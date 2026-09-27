@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from decimal import Decimal
 from functools import total_ordering
 from typing import Any, Self, final, overload
@@ -435,9 +435,9 @@ class Money(MonetaryAmount):
         return {"minor_units": self._amount, "currency": self._currency.ccy_code}
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Money:
+    def from_dict(cls, data: Mapping[str, Any]) -> Money:
         """Reconstruct a Money instance from a dictionary payload."""
-        return cls(data["minor_units"], Currency.from_code(data["currency"]))
+        return cls(int(data["minor_units"]), Currency.from_code(data["currency"]))
 
     def cash(self, rounding: Callable[[int], int]) -> Money:
         """Applies a custom cash-rounding strategy to the minor units amount.
