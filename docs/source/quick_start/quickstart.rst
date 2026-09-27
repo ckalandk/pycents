@@ -370,6 +370,29 @@ the locale to use, see the following example on how to explicitly choose a local
 
     Locale configuration should be done after backend selection.
 
+Interactive Formatting Example
+------------------------------
+
+PyCents includes a small Textual application that provides an interactive
+playground for the money format specification.
+
+The application lets you enter an amount and choose how it should be displayed.
+You can select the currency display (symbol, hidden, ISO code, or currency name),
+choose a format type such as standard, compact, or accounting, and enable options
+such as disabling digit grouping or trimming insignificant trailing zeros. When
+using compact notation, you can also specify the number of fractional digits.
+
+As you change the options, the application shows both the resulting format
+specification and the formatted money value.
+
+The example is available as `examples/formatting_tui.py`. See the installation guide
+on how to run the examples.
+
+.. figure:: ../images/formatting_tui.svg
+   :alt: PyCents interactive money formatting application
+   :align: center
+   :width: 90%
+
 Currency Conversion
 ===================
 

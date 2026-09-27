@@ -336,8 +336,7 @@ specifies the rounding mode to apply when the monetary amount has more fractiona
 than the currency supports. If omitted, an exception is raised when the amount cannot
 be represented exactly in minor units.
 
-The Rounding Policies are provided through the enum ``RoundingMode``
-from the ``pycents.rounding`` package. See :doc:`/guide/rounding`.
+The Rounding Policies are provided through the enum ``RoundingMode``.
 
 .. code-block:: python
 
@@ -719,12 +718,6 @@ Floating-point arithmetic is inherently imprecise. Using `float` in scientific
 calculation is perfectly valid, but not in financial applications where every
 cent must be accounted for.
 
-.. code-block:: python
-
-    >>> 0.1 + 0.2
-    0.30000000000000004
-
-
 ``PyCents`` does not reject `float` values at runtime. However, its type annotations
 deliberately do not include `float`, so a static type checker such as **mypy** or
 **Pyright** will report an error when a float is passed to an API expecting an
@@ -768,20 +761,12 @@ then a loop.
         mny - mny * Decimal(item["discount"]) for mny, item in zip(prices, items)
     ]
 
-    # `total` is either a `Money` or a `UnroundedMoney` instance
-    # You can, either supply a rounding mode via the keyword argument `rounding`
-    # to get a Money instance
-
-    total = Money.sum(prices_after_discounts, rounding=RoundingMode.UP)
-    assert isinstance(total, Money)
-
-    print(total) # Output: USD 1221.14
-    # If you don't provide a rounding mode the result will be an
-    # `UnroundedMoney` instance if there is at least one `UnroundedMoney`
-    # instance in the provided list, or a `Money` object otherwise
+    # `total` is an `UnroundedMoney` instance
 
     total = Money.sum(prices_after_discounts)
     assert isinstance(total, UnroundedMoney)
+
+    print(total)
 
     # At this stage you can carry on with any remainding calculation
     # or round the result to get a `Money` instance

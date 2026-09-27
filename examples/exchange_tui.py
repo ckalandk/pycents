@@ -87,11 +87,11 @@ class PyCentsExchangeApp(App):
         with Horizontal(id="control-bar"):
             with Vertical(classes="field-box"):
                 yield Label("Amount (Major Units):")
-                yield Input(value="100.00", id="amount-input")
+                yield Input(id="amount-input")
 
             with Vertical(classes="field-box"):
                 yield Label("Base Currency:")
-                yield Input(value=base_ccy, id="currency-input")
+                yield Input(id="currency-input")
 
         yield DataTable(id="rate-table")
         yield Static("Ready", id="status")
@@ -103,6 +103,11 @@ class PyCentsExchangeApp(App):
 
     def on_mount(self) -> None:
         """Initialize the PyCents provider and setup DataTable columns."""
+        amount_input = self.query_one("#amount-input", Input)
+        ccy_input = self.query_one("#currency-input", Input)
+        with amount_input.prevent(Input.Changed), ccy_input.prevent(Input.Changed):
+            amount_input.value = "100.00"
+            ccy_input.value = base_ccy
 
         # Create the Exchange Rate Provider, use ECB.
         self.provider = DefaultProvider("ECB")
@@ -119,6 +124,7 @@ class PyCentsExchangeApp(App):
         # Fetch all available rates in one request and store them in the
         # provider's cache. Subsequent get_rate() calls use this cached data.
         self.provider.prefetch_rates()
+        self.trigger_refresh()
 
     def trigger_refresh(self) -> None:
         # Read the current values entered by the user.

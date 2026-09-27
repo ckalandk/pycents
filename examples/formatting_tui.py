@@ -9,7 +9,6 @@ from textual.widgets import (
     Button,
     Checkbox,
     Footer,
-    Header,
     Input,
     Label,
     RadioButton,
@@ -36,7 +35,6 @@ class LabeledField(Vertical):
     LabeledField Label {
         text-style: bold;
         color: cyan;
-        margin-bottom: 1;
     }
     """
 
@@ -160,7 +158,6 @@ class PyCentsLocaleApp(App):
         max-height: 100%;
         border: heavy $accent;
         background: $panel;
-        padding: 1 2;
     }
     .row {
         height: auto;
@@ -175,6 +172,7 @@ class PyCentsLocaleApp(App):
         height: 1;
         text-style: bold;
         color: $secondary;
+        margin-bottom: 1;
     }
     Input {
         height: 3;
@@ -239,7 +237,6 @@ class PyCentsLocaleApp(App):
         )
 
     def compose(self) -> ComposeResult:
-        yield Header()
 
         with Vertical(id="main-panel"):
             yield Label("💸 Money Amount (Major Units):")

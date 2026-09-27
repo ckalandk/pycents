@@ -24,6 +24,7 @@ docs/_build/
 
 # playground
 examples/lab.py
+examples/flask_example.py
 extra/
 
 # Coverage reports
