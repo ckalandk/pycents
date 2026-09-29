@@ -10,7 +10,7 @@ from pycents._decimal import _force_decimal
 from pycents.currency import Currency
 from pycents.exceptions import CurrencyMismatchError
 
-from .rate_context import ExchangeRateInfo
+from .rate_context import ExchangeRateInfo, ExchangeRateInfoData
 
 __all__ = ["ExchangeRate", "ExchangeRateData"]
 
@@ -19,8 +19,8 @@ class ExchangeRateData(TypedDict):
     base: str
     quote: str
     rate: str
-    sources: NotRequired[list[ExchangeRateData]]
-    info: NotRequired[dict[str, str]]
+    legs: NotRequired[list[ExchangeRateData]]
+    info: NotRequired[ExchangeRateInfoData]
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,7 +45,7 @@ class ExchangeRate:
     base: Currency
     quote: Currency
     rate: Decimal
-    path: tuple[ExchangeRate, ...] = field(default=(), repr=False)
+    legs: tuple[ExchangeRate, ...] = field(default=(), repr=False)
     info: ExchangeRateInfo | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
@@ -56,17 +56,15 @@ class ExchangeRate:
 
     @property
     def is_cross(self) -> bool:
-        return bool(self.path)
+        return bool(self.legs)
 
     @property
     def lineage(self) -> tuple[ExchangeRate, ...]:
         """Return the flat chain of direct exchange rates used to build this rate."""
-        if not self.path:
-            return (self,)
-        flat_chain: list[ExchangeRate] = []
-        for src in self.path:
-            flat_chain.extend(src.lineage)
-        return tuple(flat_chain)
+        path: list[ExchangeRate] = []
+        for src in self.legs:
+            path.extend(src.lineage or (src,))
+        return tuple(path)
 
     @classmethod
     def from_pair(
@@ -129,12 +127,12 @@ class ExchangeRate:
         quote = Currency.from_code(data["quote"])
         rate = Decimal(data["rate"])
         path: tuple[ExchangeRate, ...] = tuple()
-        if "sources" in data:
-            path = tuple(ExchangeRate.from_dict(rate) for rate in data["sources"])
+        if "legs" in data:
+            path = tuple(ExchangeRate.from_dict(rate) for rate in data["legs"])
         info = None
         if "info" in data:
             info = ExchangeRateInfo.from_dict(data["info"])
-        return cls(base=base, quote=quote, rate=rate, path=path, info=info)
+        return cls(base=base, quote=quote, rate=rate, legs=path, info=info)
 
     def as_dict(self) -> ExchangeRateData:
         """Return the exchange rate as a serializable dictionary."""
@@ -143,8 +141,8 @@ class ExchangeRate:
             "quote": self.quote.ccy_code,
             "rate": str(self.rate),
         }
-        if self.path:
-            data["sources"] = [src.as_dict() for src in self.lineage]
+        if self.legs:
+            data["legs"] = [src.as_dict() for src in self.lineage]
         if self.info is not None:
             data["info"] = self.info.as_dict()
         return data
@@ -164,7 +162,7 @@ class ExchangeRate:
             quote=other.quote,
             rate=self.rate * other.rate,
             info=None,
-            path=(self, other),
+            legs=(self, other),
         )
 
     def invert(self) -> ExchangeRate:
@@ -173,7 +171,27 @@ class ExchangeRate:
             quote=self.base,
             rate=Decimal(1) / self.rate,
             info=self.info,
-            path=tuple(src.invert() for src in self.path[::-1]),
+            legs=tuple(src.invert() for src in self.legs[::-1]),
+        )
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ExchangeRate):
+            return NotImplemented
+        return (
+            self.base == other.base
+            and self.quote == other.quote
+            and self.rate == other.rate
+            and self.info == other.info
+            and self.lineage == other.lineage
+        )
+
+    def __hash__(self) -> int:
+        return hash((self.base, self.quote, self.rate, self.info, self.lineage))
+
+    def __repr__(self) -> str:
+        return (
+            f"ExchangeRate(base='{self.base!s}', "
+            f"quote='{self.quote!s}', rate={self.rate!s})"
         )
 
     def __str__(self) -> str:

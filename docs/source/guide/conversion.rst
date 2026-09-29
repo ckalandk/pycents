@@ -46,7 +46,7 @@ For reference we expose here a simplified version of both classes:
         provider: str
         ratetype: str
         asof: date | datetime
-        metadata: Mapping[str, Any]
+        metadata: Mapping[str, Hashable]
 
 .. note::
 
@@ -56,21 +56,20 @@ For reference we expose here a simplified version of both classes:
 ExchangeRate Information and Metadata
 -------------------------------------
 
-Given the provider, base currency, quote currency, timestamp, and rate type,
-the rate should be identifiable and, in principle, obtainable again from the provider.
+Provider, base, quote, rate type and date describe which observation a rate is:
+where the number came from and what it claims to represent.
+They are a label, not a retrieval key. Querying the same provider later with the same
+arguments may return a different value.
+PyCents never assumes a rate can be fetched again. The ExchangeRate object is the
+record of the observation. If you need to reproduce a result later, persist the
+rate (see Serializing and deserializing) instead of refetching it.
 
-For example:
-
-.. code-block:: text
-
-    Provider:    ECB
-    Base:        EUR
-    Quote:       USD
-    Timestamp:   2026-09-11
-    Rate type:   reference rate
-
-Together, these identify the particular EUR/USD reference rate published by the ECB
-for that observation.
+Whether querying a provider again for the same date returns the same value depends
+on the provider. A provider that publishes a single official fixing per day
+(most central and commercial banks, including the ECB) will in theory return the same rate
+for a given date indefinitely, since the fixing is the historical record.
+A provider that aggregates live market rates (FastForex and similar) has no single
+"the rate for that day," since the date doesn't specify a moment.
 
 Metadata
 ~~~~~~~~
@@ -81,7 +80,7 @@ to the specific rate observation.
 As a rule of thumb:
 
 Metadata should contain information that is essential for reconstructing the ExchangeRate,
-or that are meaningfully associated with the rate obsevation.
+or that are meaningfully associated with the rate observation.
 
 Metadata should therefore not be used as a general-purpose dump of information exposed
 by the provider.
@@ -92,14 +91,13 @@ For example, metadata may contain:
 
     {
         "source_url": "...",
-        "raw_response": "...",
         "market": "...",
         "instrument": "...",
     }
 
 On the other hand, provider information that does not contribute to identifying or
 reconstructing the observation should generally not be stored in ``ExchangeRateInfo.metadata``.
-Those belong to provider-level information rather.
+Those belong to provider-level information.
 
 Cross Exchange Rate & Rate Inversion
 ------------------------------------
@@ -188,8 +186,8 @@ For example, a provider could return:
 
 .. code-block:: text
 
-    USD/EUR bid = 0.8557
-    USD/EUR ask = 0.8552
+    USD/EUR bid = 0.8798
+    USD/EUR ask = 0.8802
 
 You could then construct the rate as follow:
 
@@ -198,15 +196,15 @@ You could then construct the rate as follow:
     rate = ExchangeRate(
         Currency.from_code("USD"),
         Currency.from_code("EUR"),
-        Decimal('0.8557'),
+        Decimal('0.8798'),
         info = ExchangeRateInfo(
             provider="FastForex",
             ratetype="bid",
-            metadata={"ask": Decimal('0.8552')},
+            metadata={"ask": Decimal('0.8802')},
         )
     )
 
-Notice how we retained the corresponding ask needed for correct financial inversion.
+Notice how we retained the corresponding `ask` needed for correct financial inversion.
 
 Then, rather than doing:
 
@@ -221,9 +219,8 @@ You can use the stored counterpart directly:
     from pycents.conversion import ExchangeRate, ExchangeRateInfo
 
     inverse = ExchangeRate.from_pair(
-        "EUR",
-        "USD",
-        1 / rate.info.metadata["ask"], # Or 1 / rate.info.ask
+        "EUR/USD",
+        1 / rate.info.metadata["ask"],
         info=ExchangeRateInfo(
             provider=rate.info.provider,
             ratetype="bid",
@@ -232,6 +229,15 @@ You can use the stored counterpart directly:
             },
         )
     )
+
+So as a rule of thumb:
+
+Use `invert()` only when you know the provider does not publish the reverse pair
+directly and a reciprocal is an acceptable approximation for your use case — this is typically
+true for reference-rate providers like the ECB, which publish one rate per pair with
+no independent bid/ask or reverse listing.
+If the provider does publish the reverse rate (directly, or as bid/ask sides of the same quote),
+query that rate instead of inverting.
 
 Cross-rate derivation
 ~~~~~~~~~~~~~~~~~~~~~
@@ -290,7 +296,7 @@ a rate was obtained through cross-rate derivation:
 
 .. code-block:: python
 
-   eur_cad.is_cross()
+   eur_cad.is_cross
    # True
 
 Combining rate inversion and cross-rate derivation
@@ -375,7 +381,7 @@ Cross-derived rates
 
 When an :class:`ExchangeRate` was obtained through cross-rate derivation,
 its source rates are included in the serialized representation under
-``"sources"``. The complete derivation lineage is therefore preserved
+``"legs"``. The complete derivation lineage is therefore preserved
 and reconstructed when the rate is deserialized.
 
 For example, a cross-derived rate such as:
@@ -593,6 +599,35 @@ To create a custom exchange-rate provider, implement the
 
 The protocol intentionally has a minimal interface: a provider must implement
 only :meth:`ExchangeRateProvider.get_rate`.
+
+Caching custom kwargs
+~~~~~~~~~~~~~~~~~~~~~~
+
+If your provider accepts additional keyword arguments through ``**kwargs``
+and caches results internally, the cache key must include every keyword
+argument that affects the returned rate. A provider accepting
+``ratetype="bid"`` and ``ratetype="ask"`` must not conflate the two in its
+cache, or a query for one will silently return the other.
+
+This is easy to overlook, since ``base``, ``quote``, ``asof`` and the
+provider's own identity are often enough to identify a rate for simple
+providers such as :class:`DefaultProvider`. A provider that exposes
+several rate variants through ``kwargs`` — for example a live-quote
+provider offering both bid/ask and a midpoint rate through different
+options — must fold every kwarg that changes the result into its cache
+key, or requests for different variants will collide.
+
+A safe default is to build the cache key from the base fields plus the
+sorted kwargs, provided all kwarg values are hashable:
+
+.. code-block:: python
+
+     cache_key = (
+        base.ccy_code,
+        quote.ccy_code,
+        asof,
+        tuple(sorted(kwargs.items())),
+    )
 
 For a complete example of a provider implementation, see the
 :class:`DefaultProvider` source code.

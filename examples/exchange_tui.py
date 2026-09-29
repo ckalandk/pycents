@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import InvalidOperation
 
 from textual import work
@@ -93,25 +94,44 @@ class PyCentsExchangeApp(App):
                 yield Label("Base Currency:")
                 yield Input(id="currency-input")
 
+            with Vertical(classes="field-box"):
+                yield Label("Date")
+                yield Input(
+                    placeholder="YYYY-MM-DD",
+                    id="asof-input",
+                )
+
         yield DataTable(id="rate-table")
         yield Static("Ready", id="status")
         yield Footer()
 
     def on_input_changed(self, event: Input.Changed) -> None:
         """Trigger re-calculation whenever amount or base currency changes."""
+        if event.input.id == "asof-input":
+            try:
+                self.provider.rate_date = date.fromisoformat(event.value)
+                self.provider.prefetch_rates()
+            except ValueError as err:
+                self.show_error(str(err))
         self.trigger_refresh()
 
     def on_mount(self) -> None:
         """Initialize the PyCents provider and setup DataTable columns."""
         amount_input = self.query_one("#amount-input", Input)
         ccy_input = self.query_one("#currency-input", Input)
-        with amount_input.prevent(Input.Changed), ccy_input.prevent(Input.Changed):
+        date_input = self.query_one("#asof-input", Input)
+        with (
+            amount_input.prevent(Input.Changed),
+            ccy_input.prevent(Input.Changed),
+            date_input.prevent(Input.Changed),
+        ):
             amount_input.value = "100.00"
             ccy_input.value = base_ccy
+            date_input.value = date.today().isoformat()
 
         # Create the Exchange Rate Provider, use ECB.
         self.provider = DefaultProvider("ECB")
-
+        self.provider.rate_date = date.fromisoformat(date_input.value)
         # Set up the table columns before adding any conversion results.
         table = self.query_one(DataTable)
         table.add_columns(
@@ -130,8 +150,9 @@ class PyCentsExchangeApp(App):
         # Read the current values entered by the user.
         amount_str = self.query_one("#amount-input", Input).value.strip()
         base_ccy = self.query_one("#currency-input", Input).value.strip().upper()
+        asof_str = self.query_one("#asof-input", Input).value.strip()
 
-        if not amount_str or not base_ccy:
+        if not amount_str or not base_ccy or not asof_str:
             return
 
         table = self.query_one(DataTable)
@@ -145,15 +166,15 @@ class PyCentsExchangeApp(App):
 
         # Run the conversions in a background thread so the Textual UI
         # remains responsive while the calculations are being performed.
-        self.run_conversions(amount_str, base_ccy)
+        self.run_conversions(amount_str, base_ccy, asof_str)
 
     @work(exclusive=True, thread=True)
-    def run_conversions(self, amount_str: str, base_ccy: str) -> None:
+    def run_conversions(self, amount_str: str, base_ccy: str, asof_str: str) -> None:
         """Runs in a background thread outside the main Textual UI thread"""
         try:
             # Convert the user's input into a Money object.
             base_money = Money.from_major(amount_str, base_ccy)
-
+            asof = date.fromisoformat(asof_str)
             # Calculate one conversion for every currency in the watchlist.
             for target_ccy in WATCHLIST:
                 # Skip if the base and quote currency are the same
@@ -161,7 +182,7 @@ class PyCentsExchangeApp(App):
                     continue
                 # Get the Exchange Rate from the provider
                 rate_obj = self.provider.get_rate(
-                    base_money.currency, Currency.from_code(target_ccy)
+                    base_money.currency, Currency.from_code(target_ccy), asof=asof
                 )
                 # Apply the exchange rate directly to the Money object.
                 converted_money = base_money * rate_obj

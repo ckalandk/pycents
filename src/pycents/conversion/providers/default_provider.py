@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
-from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import Any, cast
-from urllib.error import HTTPError
+from typing import Any, TypedDict, cast
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -16,9 +14,9 @@ from pycents.conversion.rate_context import ExchangeRateInfo
 from pycents.currency import Currency
 from pycents.exceptions import ProviderQueryError
 
-_rate_cache_key = tuple[str, str, str | None, date | None]
-
 __all__ = ["DefaultProvider", "ProviderInfo"]
+
+_RateCacheKey = tuple[str, str, str | None, date | None]
 
 
 def _get_request(url: str) -> Request:
@@ -27,8 +25,7 @@ def _get_request(url: str) -> Request:
     )
 
 
-@dataclass(frozen=True, slots=True)
-class ProviderInfo:
+class ProviderInfo(TypedDict):
     code: str
     name: str
     country_code: str
@@ -36,20 +33,9 @@ class ProviderInfo:
     pivot_currency: str
     data_url: str
 
-    @classmethod
-    def from_dict(cls, data: Mapping[str, str]) -> ProviderInfo:
-        return cls(
-            code=data["key"],
-            name=data["name"],
-            country_code=data["country_code"],
-            ratetype=data["rate_type"],
-            pivot_currency=data["pivot_currency"],
-            data_url=data["data_url"],
-        )
-
 
 class DefaultProvider(ExchangeRateProvider):
-    _rate_cache: dict[_rate_cache_key, ExchangeRate] = {}
+    _rate_cache: dict[_RateCacheKey, ExchangeRate] = {}
     _metadata_cache: dict[str, ProviderInfo] = {}
 
     def __init__(self, provider: str | None = None, asof: date | None = None):
@@ -110,7 +96,7 @@ class DefaultProvider(ExchangeRateProvider):
         if self.default_provider is None:
             return self._get_rate(base, quote, asof=_date, **kwargs)
         metadata = self.provider_info()
-        pivot = Currency.from_code(metadata.pivot_currency)
+        pivot = Currency.from_code(metadata["pivot_currency"])
 
         if pivot == base:
             return self._get_rate(base, quote, asof=_date, **kwargs)
@@ -137,9 +123,10 @@ class DefaultProvider(ExchangeRateProvider):
             with urlopen(req, timeout=5) as response:
                 data = json.load(response)
         except HTTPError as err:
-            error = json.load(err)
-            msg = error["message"]
-            raise ProviderQueryError(f"{msg}") from err
+            raise ProviderQueryError(f"{err.code}: {err.reason}") from err
+        except URLError as err:
+            raise ProviderQueryError(f"{err.reason}") from err
+
         return cast(dict[str, Any], data)
 
     def _fetch_provider_details(self) -> ProviderInfo:
@@ -148,11 +135,23 @@ class DefaultProvider(ExchangeRateProvider):
         try:
             with urlopen(req, timeout=5) as response:
                 provider = json.load(response)
-        except HTTPError:
-            raise ProviderQueryError(
-                f"Unkown provider name: '{self.default_provider}'"
-            ) from None
-        return ProviderInfo.from_dict(provider)
+        except HTTPError as err:
+            if err.code == 404:
+                raise ProviderQueryError(
+                    f"Unknown provider name: '{self.default_provider}'"
+                ) from None
+            raise ProviderQueryError(f"{err.code}: {err.reason}") from None
+        except URLError as err:
+            raise ProviderQueryError(f"Could not reach provider: {err.reason}") from err
+        print(provider)
+        return ProviderInfo(
+            code=provider["key"],
+            name=provider["name"],
+            country_code=provider["country_code"],
+            ratetype=provider["rate_type"],
+            pivot_currency=provider["pivot_currency"],
+            data_url=provider["data_url"],
+        )
 
     def provider_info(self) -> ProviderInfo:
         """Fetches provider metadata from Frankfurter."""
@@ -178,13 +177,20 @@ class DefaultProvider(ExchangeRateProvider):
         base_url = "https://api.frankfurter.dev/v2/rates"
         if self.default_provider is not None:
             base_url += f"?providers={self.default_provider}"
+        if self.rate_date is not None:
+            base_url += f"&date={self.rate_date.isoformat()}"
         req = _get_request(base_url)
         try:
             with urlopen(req, timeout=5) as response:
                 rates = json.load(response)
         except HTTPError as err:
-            error = json.load(err)
-            raise ProviderQueryError(f"'{error['message']}'") from err
+            if err.code == 404:
+                raise ProviderQueryError(
+                    f"Unknown provider name: '{self.default_provider}'"
+                ) from None
+            raise ProviderQueryError(f"{err.code}: {err.reason}") from err
+        except URLError as err:
+            raise ProviderQueryError(f"Could not reach provider: {err.reason}") from err
         for rate in rates:
             exchange_rate = self._make_exchange_rate(rate)
             cache_key = (
@@ -200,7 +206,7 @@ class DefaultProvider(ExchangeRateProvider):
         if self.default_provider is not None:
             metadata = self.provider_info()
 
-        ratetype = metadata.ratetype if metadata is not None else "blended"
+        ratetype = metadata["ratetype"] if metadata is not None else "blended"
 
         asof = date.fromisoformat(data["date"])
         rateinfo = ExchangeRateInfo(

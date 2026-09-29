@@ -1,8 +1,15 @@
-from collections.abc import Mapping
+from collections.abc import Hashable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from types import MappingProxyType
-from typing import Any, Self
+from typing import Any, NotRequired, Self, TypedDict
+
+
+class ExchangeRateInfoData(TypedDict):
+    provider: str
+    ratetype: str
+    asof: str
+    metadata: NotRequired[dict[str, Any]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,43 +33,35 @@ class ExchangeRateInfo:
     provider: str
     ratetype: str
     asof: date | datetime = field(default_factory=lambda: datetime.now(UTC))
-    metadata: Mapping[str, Any] = field(default_factory=dict)
+    metadata: Mapping[str, Hashable] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        core_keys = {"provider", "ratetype", "asof"}
-        collisions = core_keys & self.metadata.keys()
-        if collisions:
-            bad_keys = ", ".join(sorted(collisions))
-            raise ValueError(f"Metadata cannot contain reserved keys: {bad_keys}")
-        if isinstance(self.metadata, dict):
-            object.__setattr__(self, "metadata", MappingProxyType(self.metadata))
+        object.__setattr__(self, "metadata", MappingProxyType(self.metadata))
 
-    def __getattr__(self, name: str) -> Any:
-        if name in self.metadata:
-            return self.metadata[name]
-        raise AttributeError(f"'{type(self).__name__}' has no attribute '{name}'")
-
-    def as_dict(self) -> dict[str, str]:
+    def as_dict(self) -> ExchangeRateInfoData:
         """Serialize the exchange-rate information to a dictionary.
 
         Returns: A dictionary containing the provider, rate type, ISO-formatted
             timestamp, and metadata entries.
         """
-        base = {
+        base: ExchangeRateInfoData = {
             "provider": self.provider,
             "ratetype": self.ratetype,
-            "timestamp": self.asof.isoformat(),
+            "asof": self.asof.isoformat(),
         }
-        return {**base, **self.metadata}
+
+        if self.metadata:
+            base["metadata"] = dict(self.metadata)
+
+        return base
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Self:
-        core_keys = {"provider", "ratetype", "timestamp"}
-        provider = data["provider"]
-        ratetype = data["ratetype"]
-        timestamp = datetime.fromisoformat(data["timestamp"])
-        metadata = {k: data[k] for k in data.keys() - core_keys}
-
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        raw = data["asof"]
+        asof = datetime.fromisoformat(raw) if "T" in raw else date.fromisoformat(raw)
         return cls(
-            provider=provider, ratetype=ratetype, asof=timestamp, metadata=metadata
+            provider=data["provider"],
+            ratetype=data["ratetype"],
+            asof=asof,
+            metadata=data.get("metadata", {}),
         )

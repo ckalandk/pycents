@@ -1,8 +1,9 @@
+import json
 from datetime import date
 from decimal import Decimal
 from io import BytesIO
 from unittest.mock import MagicMock
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 import pytest
 
@@ -183,11 +184,13 @@ def test_rate_lookup_failures(monkeypatch, body, msg):
 
     provider = DefaultProvider("ECB")
 
+    body_dict = json.loads(body.decode())
+
     def mock_urlopen(*args, **kwargs):
         raise HTTPError(
             url="https://example.com",
-            code=422,
-            msg="Unprocessable Entity",
+            code=body_dict["status"],
+            msg=body_dict["message"],
             hdrs=None,  # type: ignore
             fp=BytesIO(body),
         )
@@ -197,6 +200,21 @@ def test_rate_lookup_failures(monkeypatch, body, msg):
     )
 
     with pytest.raises(ProviderQueryError, match=msg):
+        _ = provider._fetch_rate("https://example.com")
+
+
+def test_rate_lookup_url_failures(monkeypatch):
+
+    provider = DefaultProvider("ECB")
+
+    def mock_urlopen(*args, **kwargs):
+        raise URLError("Random Error")
+
+    monkeypatch.setattr(
+        "pycents.conversion.providers.default_provider.urlopen", mock_urlopen
+    )
+
+    with pytest.raises(ProviderQueryError, match="Random Error"):
         _ = provider._fetch_rate("https://example.com")
 
 
@@ -219,26 +237,29 @@ def test_provider_info(monkeypatch):
     provider = DefaultProvider()
     info = provider.provider_info()
 
-    assert info.code == "Frankfurter"
-    assert info.name == "Frankfurter"
+    assert info["code"] == "Frankfurter"
+    assert info["name"] == "Frankfurter"
 
     provider.name = "ECB"
     info = provider.provider_info()
 
-    assert info.code == "ECB"
-    assert info.name == "European Central Bank"
-    assert info.country_code == "EU"
-    assert info.data_url == "www.ecb.com"
+    assert info["code"] == "ECB"
+    assert info["name"] == "European Central Bank"
+    assert info["country_code"] == "EU"
+    assert info["data_url"] == "www.ecb.com"
 
 
-def test_provider_info_failure(monkeypatch):
+@pytest.mark.parametrize(
+    "status, msg", [(404, "Unknown provider name"), (422, "Silly error")]
+)
+def test_provider_info_http_failure(monkeypatch, status, msg):
     provider = DefaultProvider("Monty Python")
 
     def mock_urlopen(*args, **kwargs):
         raise HTTPError(
             url="https://example.com",
-            code=422,
-            msg="Unprocessable Entity",
+            code=status,
+            msg=msg,
             hdrs=None,  # type: ignore
             fp=BytesIO(b""),
         )
@@ -247,9 +268,21 @@ def test_provider_info_failure(monkeypatch):
         "pycents.conversion.providers.default_provider.urlopen", mock_urlopen
     )
 
-    with pytest.raises(
-        ProviderQueryError, match="Unkown provider name: 'Monty Python'"
-    ):
+    with pytest.raises(ProviderQueryError, match=msg):
+        _ = provider.provider_info()
+
+
+def test_provider_info_url_failure(monkeypatch):
+    provider = DefaultProvider("Monty Python")
+
+    def mock_urlopen(*args, **kwargs):
+        raise URLError("Unable to connect to the provider")
+
+    monkeypatch.setattr(
+        "pycents.conversion.providers.default_provider.urlopen", mock_urlopen
+    )
+
+    with pytest.raises(ProviderQueryError, match="Unable to connect to the provider"):
         _ = provider.provider_info()
 
 
@@ -262,7 +295,7 @@ def test_provider_info_cache(provider, monkeypatch):
     assert len(_provider_cache_patch) == 0
 
     info = provider.provider_info()
-    assert info.code == "ECB"
+    assert info["code"] == "ECB"
     assert len(_provider_cache_patch) == 1
 
     assert info is _provider_cache_patch["ECB"]
@@ -275,3 +308,77 @@ def test_provider_info_cache(provider, monkeypatch):
     info = provider.provider_info()
 
     assert info is _provider_cache_patch["ECB"]
+
+
+def test_prefetch_rates_populates_cache(monkeypatch):
+    provider = DefaultProvider("ECB")
+
+    fake_payload = [
+        {"base": "EUR", "quote": "USD", "rate": "1.1000", "date": "2026-09-28"},
+        {"base": "EUR", "quote": "CAD", "rate": "1.5000", "date": "2026-09-28"},
+    ]
+
+    mock_resp = MagicMock()
+    mock_resp.__enter__.return_value = mock_resp
+    monkeypatch.setattr(
+        "pycents.conversion.providers.default_provider.json.load",
+        lambda response: fake_payload,
+    )
+    monkeypatch.setattr(
+        provider,
+        "provider_info",
+        lambda: {
+            "code": "ECB",
+            "name": "European Central Bank",
+            "ratetype": "reference",
+        },
+    )
+
+    monkeypatch.setattr(
+        "pycents.conversion.providers.default_provider.urlopen",
+        lambda req, timeout: mock_resp,
+    )
+
+    provider.prefetch_rates()
+
+    key_usd = ("EUR", "USD", "ECB", provider.rate_date)
+    key_cad = ("EUR", "CAD", "ECB", provider.rate_date)
+    assert provider._rate_cache[key_usd].rate == Decimal("1.1000")
+    assert provider._rate_cache[key_cad].rate == Decimal("1.5000")
+
+
+@pytest.mark.parametrize(
+    "status, msg", [(404, "Unknown provider name:"), (422, "Something bad happened")]
+)
+def test_prefetch_rates_httperror(monkeypatch, status, msg):
+    provider = DefaultProvider("ECB")
+
+    def mock_urlopen(*args, **kwargs):
+        raise HTTPError(
+            url="https://example.com",
+            code=status,
+            msg=msg,
+            hdrs=None,  # type: ignore
+            fp=BytesIO(b""),
+        )
+
+    monkeypatch.setattr(
+        "pycents.conversion.providers.default_provider.urlopen", mock_urlopen
+    )
+
+    with pytest.raises(ProviderQueryError, match=msg):
+        provider.prefetch_rates()
+
+
+def test_prefetch_rates_urllerror(monkeypatch):
+    provider = DefaultProvider("ECB")
+
+    def mock_urlopen(*args, **kwargs):
+        raise URLError("Unkwown reason")
+
+    monkeypatch.setattr(
+        "pycents.conversion.providers.default_provider.urlopen", mock_urlopen
+    )
+
+    with pytest.raises(ProviderQueryError, match="Unkwown reason"):
+        provider.prefetch_rates()

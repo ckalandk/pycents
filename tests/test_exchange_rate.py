@@ -30,7 +30,7 @@ class TestExchangeRate:
         assert rate.base == Currency.from_code("USD")
         assert rate.quote == Currency.from_code("EUR")
         assert rate.rate == Decimal("0.85")
-        assert rate.path == ()
+        assert rate.legs == ()
         assert rate.info is None
         assert not rate.is_cross
 
@@ -56,7 +56,7 @@ class TestExchangeRate:
         )
 
         assert rate.info is info
-        assert rate.path == ()
+        assert rate.legs == ()
         assert not rate.is_cross
 
     @pytest.mark.parametrize(
@@ -77,7 +77,7 @@ class TestExchangeRate:
         assert rate.quote.ccy_code == "EUR"
         assert rate.rate == Decimal("0.85")
         assert rate.info is None
-        assert rate.path == ()
+        assert rate.legs == ()
         assert not rate.is_cross
 
     def test_from_string_preserves_context(self):
@@ -107,7 +107,7 @@ class TestExchangeRate:
         result = usd_eur * eur_cad
 
         assert result.is_cross
-        assert result.path == (usd_eur, eur_cad)
+        assert result.legs == (usd_eur, eur_cad)
 
     def test_multiplication_does_not_propagate_context(self):
         context1 = ExchangeRateInfo(
@@ -151,7 +151,7 @@ class TestExchangeRate:
             _ = usd_eur * 2
 
     def test_lineage_of_direct_rate_is_self(self, usd_eur):
-        assert usd_eur.lineage == (usd_eur,)
+        assert usd_eur.lineage == ()
 
     def test_lineage_of_cross_rate(self, usd_eur, eur_cad):
         result = usd_eur * eur_cad
@@ -167,7 +167,7 @@ class TestExchangeRate:
         usd_cad = usd_eur * eur_cad
         usd_jpy = usd_cad * cad_jpy
 
-        assert usd_jpy.path == (usd_cad, cad_jpy)
+        assert usd_jpy.legs == (usd_cad, cad_jpy)
         assert usd_jpy.lineage == (
             usd_eur,
             eur_cad,
@@ -211,7 +211,7 @@ class TestExchangeRate:
         result = usd_eur * eur_cad
 
         assert usd_eur is original
-        assert usd_eur.path == ()
+        assert usd_eur.legs == ()
         assert usd_eur.info is None
         assert result is not usd_eur
 
@@ -250,7 +250,7 @@ class TestExchangeRate:
         right = usd_eur * (eur_cad * cad_jpy)
 
         assert left.lineage == right.lineage
-        assert left.path != right.path
+        assert left.legs != right.legs
 
     # test inversion
     def test_invert(self, usd_eur):
@@ -279,7 +279,7 @@ class TestExchangeRate:
     def test_invert_is_not_cross(self, usd_eur):
         inverted = usd_eur.invert()
 
-        assert inverted.path == ()
+        assert inverted.legs == ()
         assert not inverted.is_cross
 
     def test_double_inversion_returns_original_state(self, usd_eur):
@@ -293,7 +293,7 @@ class TestExchangeRate:
         assert result.base == usd_eur.base
         assert result.quote == usd_eur.quote
         assert result.info is usd_eur.info
-        assert result.path == ()
+        assert result.legs == ()
 
     def test_inverse_of_inverse_preserves_context_and_direct_status(self):
         context = ExchangeRateInfo(
@@ -310,7 +310,7 @@ class TestExchangeRate:
         result = rate.invert().invert()
 
         assert result.info is context
-        assert result.path == ()
+        assert result.legs == ()
         assert not result.is_cross
 
     def test_invert_preserve_cross_path(
@@ -322,7 +322,7 @@ class TestExchangeRate:
 
         inverted = cross.invert()
 
-        assert inverted.path == (eur_cad.invert(), usd_eur.invert())
+        assert inverted.legs == (eur_cad.invert(), usd_eur.invert())
         assert inverted.is_cross
 
     def test_exchange_rate_context_metadata(self):
@@ -353,7 +353,7 @@ class TestExchangeRate:
             "base": "USD",
             "quote": "CAD",
             "rate": "0.9903265",
-            "sources": [
+            "legs": [
                 {
                     "base": "USD",
                     "quote": "EUR",
@@ -361,10 +361,12 @@ class TestExchangeRate:
                     "info": {
                         "provider": "BBC",
                         "ratetype": "one",
-                        "timestamp": "2026-09-08T00:00:00+00:00",
-                        "name": "Ministry",
-                        "code": "silly",
-                        "publish_cadence": "Weekly",
+                        "asof": "2026-09-08T00:00:00+00:00",
+                        "metadata": {
+                            "name": "Ministry",
+                            "code": "silly",
+                            "publish_cadence": "Weekly",
+                        },
                     },
                 },
                 {
@@ -374,10 +376,12 @@ class TestExchangeRate:
                     "info": {
                         "provider": "BBC",
                         "ratetype": "one",
-                        "timestamp": "2026-09-08T00:00:00+00:00",
-                        "name": "Ministry",
-                        "code": "silly",
-                        "publish_cadence": "Weekly",
+                        "asof": "2026-09-08T00:00:00+00:00",
+                        "metadata": {
+                            "name": "Ministry",
+                            "code": "silly",
+                            "publish_cadence": "Weekly",
+                        },
                     },
                 },
             ],
@@ -387,6 +391,69 @@ class TestExchangeRate:
         rate = ExchangeRate.from_dict(expected)
 
         assert usd_cad == rate
+
+    def test_serialization_round_trip(self):
+        metadata = {"name": "Ministry", "code": "silly", "publish_cadence": "Weekly"}
+        ctx = ExchangeRateInfo(
+            provider="BBC",
+            ratetype="one",
+            asof=datetime.fromisoformat("2026-09-08T00:00:00+00:00"),
+            metadata=metadata,
+        )
+        usd_jpy = ExchangeRate.from_pair("USD/JPY", "0.85", info=ctx)
+        jpy_eur = ExchangeRate.from_pair("JPY/EUR", "0.85", info=ctx)
+        usd_eur = usd_jpy * jpy_eur
+        eur_cad = ExchangeRate.from_pair("EUR/CAD", "1.16509", info=ctx)
+        usd_cad = usd_eur * eur_cad
+
+        serialized = usd_cad.as_dict()
+
+        deserialized = ExchangeRate.from_dict(serialized)
+
+        assert usd_cad == deserialized
+
+    def test_eq_with_non_exchange_rate_returns_not_implemented(self):
+        rate = ExchangeRate.from_pair("EUR/USD", "1.1")
+
+        assert rate.__eq__("not a rate") is NotImplemented
+
+        assert (rate == "not a rate") is False
+        assert rate != "not a rate"
+        assert rate != 42
+        assert rate != None  # noqa: E711
+
+    def test_hash_is_consistent_with_equality(self):
+        a = ExchangeRate.from_pair("EUR/USD", "1.1")
+        b = ExchangeRate.from_pair("EUR/USD", "1.1")
+        assert a == b
+        assert hash(a) == hash(b)
+
+    def test_hash_usable_in_set_and_dict(self):
+        a = ExchangeRate.from_pair("EUR/USD", "1.1")
+        b = ExchangeRate.from_pair("EUR/USD", "1.1")
+        c = ExchangeRate.from_pair("USD/CAD", "1.35")
+
+        s = {a, b, c}
+        assert len(s) == 2
+
+        d = {a: "first"}
+        assert d[b] == "first"
+
+    def test_hash_differs_for_different_rates(self):
+        a = ExchangeRate.from_pair("EUR/USD", "1.10")
+        b = ExchangeRate.from_pair("EUR/USD", "1.11")
+        assert hash(a) != hash(b)
+
+    def test_hash_of_cross_rate(self):
+        eur_usd = ExchangeRate.from_pair("EUR/USD", "1.10")
+        usd_cad = ExchangeRate.from_pair("USD/CAD", "1.35")
+        eur_cad = eur_usd * usd_cad
+
+        assert hash(eur_cad) == hash(eur_usd * usd_cad)
+
+    def test_repr_is_eval_roundtrippable_or_not(self):
+        rate = ExchangeRate.from_pair("EUR/USD", "1.1")
+        assert repr(rate) == "ExchangeRate(base='EUR', quote='USD', rate=1.1)"
 
     def test_str(self):
         rate = ExchangeRate.from_string("USD/CAD=1.6712")
