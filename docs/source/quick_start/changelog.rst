@@ -3,6 +3,32 @@ Changelog
 
 All notable changes to this project will be documented in this file.
 
+1.5.0 (2026-09-29)
+------------------
+
+Added
+~~~~~
+- Add a date input field to the exchange-rate TUI, allowing the user to
+  fetch rates as of a specific date rather than only the current one.
+
+provider (DefaultProvider)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Distinguish HTTPError from URLError when querying Frankfurter: a 404
+  on the provider-lookup endpoint now raises a specific "unknown
+  provider name" error; other HTTP errors and network-level failures
+  (timeout, DNS, unreachable) are wrapped in ProviderQueryError with
+  the underlying reason preserved via `from err`.
+
+tests:
+^^^^^^
+
+- Update ExchangeRate/ExchangeRateInfo tests for the metadata hashing
+  and serialization changes (MappingProxyType copy, frozenset-based
+  __hash__, "asof"/"metadata" key renames).
+- Add provider tests covering the HTTPError branch and
+  URLError handling.
+
 1.4.0 (2026-09-27)
 -------------------
 
